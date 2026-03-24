@@ -103,16 +103,39 @@ site-audit-page-explorer                — crawl data for individual pages
 
 ## Current Build Status
 
-Nothing is built yet. Day 1 target:
+**Day 1 — complete.**
 
-- Next.js project scaffolded with Tailwind and shadcn
-- Prisma connected to MongoDB
-- `/articles` list page
-- `/articles/[id]` editor page with BlockNote
-- Autosave working
-- No auth, no sidebar, no Ahrefs calls yet
+- Next.js 14 scaffolded with Tailwind v3 and custom shadcn-style UI components (Button, Badge, Table)
+- Prisma 5 connected to MongoDB via `DATABASE_URL` in `.env.local`
+- `/articles` — lists all articles with status badge and last-updated timestamp; "New Article" button creates a DB record and redirects
+- `/articles/[id]` — full-page BlockNote editor with editable title, 1500ms autosave debounce, save indicator (Saving… / Saved / Unsaved changes), back arrow to list
+- `POST /api/articles`, `PATCH /api/articles/[id]`, `GET /api/articles/[id]` all working
 
-Update this section at the end of each build session with what was completed and what is next.
+**Day 2 — complete.**
+
+- Collapsible right sidebar panel on `/articles/[id]` (280px, toggle button on right edge)
+- `components/sidebar/keyword-panel.tsx` — keyword input, Look up button, metric card (Volume / KD / CPC / Traffic potential / SERP features), related terms list
+- `POST /api/keywords/lookup` — calls `keywords-explorer-overview` and `keywords-explorer-matching-terms` in parallel via `cachedAhrefs`
+- `lib/ahrefs.ts` — MCP client wrapper using `@modelcontextprotocol/sdk`
+- `lib/ahrefs-cached.ts` — Redis cache layer; gracefully skips caching if Upstash is not configured
+- `lib/redis.ts` — lazy Redis instantiation so placeholder env values don't crash the app at build time
+- `targetKeyword` added to Prisma Article model; PATCH route updated to accept it
+
+**Day 3 — complete.**
+
+- `POST /api/cannibalization` — fetches own-domain rankings (1000 rows, 24hr cache), runs exact + fuzzy keyword matching, checks internal drafts in DB, returns risk level and plain-English summary
+- Cannibalization check runs automatically after keyword lookup in the sidebar panel
+- Risk levels: none (green), low/medium (amber), high (red) with colour-coded banner
+- "Already ranking" list shows URL + last known position; "Other drafts" list shows article title + status badge
+
+**Important implementation notes:**
+- Do not run `npx shadcn add` — shadcn v4 targets Tailwind v4 and installs `@base-ui/react`. The UI components (Button, Badge, Table) were rewritten as plain Tailwind v3 components. Add new ones in the same pattern.
+- Prisma was pinned to v5. Prisma v7 has no MongoDB adapter and removed `url` from schema.prisma — do not upgrade.
+- BlockNote must be loaded with `dynamic(..., { ssr: false })` — it accesses the DOM on mount.
+- `lib/redis.ts` uses a lazy getter (`getRedis()`) — do not change it back to a top-level `new Redis(...)` or placeholder env values will throw at module load time.
+- The cannibalization cache key suffix for own-domain keywords is hardcoded as `"own-domain"` via the `args` object — do not change it or the cache will fragment per-caller.
+
+**Next up:** article brief generator, cluster builder, or performance tracking.
 
 ## What NOT to Do
 
