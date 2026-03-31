@@ -8,11 +8,52 @@ datasource db {
 }
 
 model Article {
-  id            String   @id @default(auto()) @map("_id") @db.ObjectId
-  title         String   @default("Untitled")
-  content       Json?
-  status        String   @default("draft")
-  targetKeyword String?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id              String   @id @default(auto()) @map("_id") @db.ObjectId
+  title           String   @default("Untitled")
+  content         Json?
+  status          String   @default("draft")
+  targetKeyword   String?
+  metaDescription String?
+  slug            String?
+  checklistScore  Int?
+  publishedUrl    String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model ArticleBrief {
+  id                 String   @id @default(auto()) @map("_id") @db.ObjectId
+  articleId          String   @db.ObjectId
+  keyword            String
+  competitors        Json
+  competitorAvgWords Int
+  outline            Json?
+  paaQuestions       Json?
+  status             String   @default("fetching")
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+}
+
+model ResearchReport {
+  id                  String   @id @default(auto()) @map("_id") @db.ObjectId
+  keyword             String
+  status              String   @default("pending")
+  competitors         Json?
+  ownData             Json?
+  summary             Json?
+  clusters            Json?
+  competitorAuthority Json?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+}
+
+model Ranking {
+  id                 String   @id @default(auto()) @map("_id") @db.ObjectId
+  articleId          String   @db.ObjectId
+  keyword            String
+  position           Int?
+  url                String?
+  volume             Int?
+  refreshOpportunity Boolean  @default(false)
+  checkedAt          DateTime @default(now())
 }

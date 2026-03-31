@@ -16,6 +16,10 @@ export default async function ArticlePage({ params }: Props) {
       initialTitle={article.title}
       initialContent={article.content}
       initialKeyword={article.targetKeyword}
+      initialMeta={article.metaDescription}
+      initialSlug={article.slug}
+      initialPublishedUrl={article.publishedUrl}
+      initialStatus={article.status}
     />
   );
 }

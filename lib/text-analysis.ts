@@ -1,3 +1,17 @@
+/* ─── Syllable counter (simplified Flesch) ───────────────────────── */
+
+function countSyllables(word: string): number {
+  const w = word.toLowerCase().replace(/[^a-z]/g, "");
+  if (w.length <= 3) return 1;
+  const stripped = w
+    .replace(/(?:[^laeiouy]es|ed|[^laeiouy]e)$/, "")
+    .replace(/^y/, "");
+  const matches = stripped.match(/[aeiouy]{1,2}/g);
+  return Math.max(1, matches ? matches.length : 1);
+}
+
+/* ─── Stop words ─────────────────────────────────────────────────── */
+
 const STOP_WORDS = new Set([
   "the", "and", "for", "that", "this", "with", "from", "are", "was",
   "were", "been", "have", "has", "had", "will", "would", "could",
@@ -47,6 +61,71 @@ function walkBlocks(blocks: unknown[]): string {
 export function extractTextFromBlocks(content: unknown): string {
   if (!Array.isArray(content)) return "";
   return walkBlocks(content);
+}
+
+/* ─── Plain text extractor ───────────────────────────────────────── */
+
+export function extractPlainText(blocks: unknown[]): string {
+  if (!Array.isArray(blocks)) return "";
+  return walkBlocks(blocks).trim();
+}
+
+/* ─── Readability (Flesch-Kincaid Reading Ease) ──────────────────── */
+
+export interface ReadabilityResult {
+  score: number;
+  label: string;
+  wordCount: number;
+  sentenceCount: number;
+  avgWordsPerSentence: number;
+}
+
+export function getReadabilityScore(plainText: string): ReadabilityResult {
+  const wordMatches = plainText.match(/\b[a-zA-Z']+\b/g) ?? [];
+  const wordCount = wordMatches.length;
+
+  if (wordCount < 50) {
+    return { score: 0, label: "Too short", wordCount, sentenceCount: 0, avgWordsPerSentence: 0 };
+  }
+
+  const sentenceMatches = plainText.match(/[^.!?]*[.!?]+/g) ?? [];
+  const sentenceCount = Math.max(1, sentenceMatches.length);
+  const avgWordsPerSentence = Math.round((wordCount / sentenceCount) * 10) / 10;
+
+  let syllableCount = 0;
+  for (const w of wordMatches) syllableCount += countSyllables(w);
+
+  const raw = 206.835 - 1.015 * (wordCount / sentenceCount) - 84.6 * (syllableCount / wordCount);
+  const score = Math.round(Math.max(0, Math.min(100, raw)));
+  const label = score >= 60 ? "Easy" : score >= 30 ? "Medium" : "Hard";
+
+  return { score, label, wordCount, sentenceCount, avgWordsPerSentence };
+}
+
+/* ─── Keyword density ────────────────────────────────────────────── */
+
+export interface KeywordDensityResult {
+  count: number;
+  density: number;
+  status: "low" | "good" | "high";
+  wordCount: number;
+}
+
+export function getKeywordDensity(plainText: string, keyword: string): KeywordDensityResult {
+  const wordMatches = plainText.match(/\b[a-zA-Z']+\b/g) ?? [];
+  const wordCount = wordMatches.length;
+
+  if (wordCount === 0 || !keyword.trim()) {
+    return { count: 0, density: 0, status: "low", wordCount };
+  }
+
+  const escaped = keyword.trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const regex = new RegExp(`\\b${escaped}\\b`, "gi");
+  const count = (plainText.match(regex) ?? []).length;
+  const density = wordCount > 0 ? (count / wordCount) * 100 : 0;
+  const status: "low" | "good" | "high" = density < 0.5 ? "low" : density > 2.5 ? "high" : "good";
+
+  return { count, density, status, wordCount };
 }
 
 export function extractKeywords(content: unknown): string[] {

@@ -6,6 +6,11 @@ const patchSchema = z.object({
   title: z.string().optional(),
   content: z.unknown().optional(),
   targetKeyword: z.string().nullable().optional(),
+  metaDescription: z.string().nullable().optional(),
+  slug: z.string().nullable().optional(),
+  checklistScore: z.number().int().nullable().optional(),
+  publishedUrl: z.string().nullable().optional(),
+  status: z.string().optional(),
 });
 
 export async function GET(
@@ -36,6 +41,11 @@ export async function PATCH(
   if (parsed.data.title !== undefined) data.title = parsed.data.title;
   if (parsed.data.content !== undefined) data.content = parsed.data.content;
   if (parsed.data.targetKeyword !== undefined) data.targetKeyword = parsed.data.targetKeyword;
+  if (parsed.data.metaDescription !== undefined) data.metaDescription = parsed.data.metaDescription;
+  if (parsed.data.slug !== undefined) data.slug = parsed.data.slug;
+  if (parsed.data.checklistScore !== undefined) data.checklistScore = parsed.data.checklistScore;
+  if (parsed.data.publishedUrl !== undefined) data.publishedUrl = parsed.data.publishedUrl;
+  if (parsed.data.status !== undefined) data.status = parsed.data.status;
 
   const article = await db.article.update({
     where: { id: params.id },

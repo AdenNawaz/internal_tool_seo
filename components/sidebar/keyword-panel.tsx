@@ -1,7 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
-import { extractKeywords } from "@/lib/text-analysis";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  extractKeywords,
+  extractPlainText,
+  getReadabilityScore,
+  getKeywordDensity,
+} from "@/lib/text-analysis";
 import type { WordResult } from "@/app/api/keywords/analyze/route";
 
 /* ─── Types ──────────────────────────────────────────────────────────── */
@@ -335,6 +340,122 @@ function ContentAnalysis({ content }: { content: unknown }) {
   );
 }
 
+/* ─── Writing quality ────────────────────────────────────────────────── */
+
+function WritingQuality({ content, targetKeyword }: { content: unknown; targetKeyword: string }) {
+  const plainText = useMemo(() => {
+    return Array.isArray(content) ? extractPlainText(content) : "";
+  }, [content]);
+
+  const readability = useMemo(() => getReadabilityScore(plainText), [plainText]);
+
+  const density = useMemo(() => {
+    if (!targetKeyword.trim() || !plainText) return null;
+    return getKeywordDensity(plainText, targetKeyword);
+  }, [plainText, targetKeyword]);
+
+  const scoreColor =
+    readability.score === 0
+      ? "text-gray-400"
+      : readability.score >= 60
+      ? "text-green-600"
+      : readability.score >= 30
+      ? "text-amber-600"
+      : "text-red-600";
+
+  const scoreBg =
+    readability.score === 0
+      ? "bg-gray-50"
+      : readability.score >= 60
+      ? "bg-green-50"
+      : readability.score >= 30
+      ? "bg-amber-50"
+      : "bg-red-50";
+
+  const densityColor =
+    !density
+      ? "text-gray-400"
+      : density.status === "good"
+      ? "text-green-600"
+      : density.status === "high"
+      ? "text-red-600"
+      : "text-amber-600";
+
+  const densityLabel =
+    !density
+      ? null
+      : density.status === "good"
+      ? "Good density"
+      : density.status === "high"
+      ? "Too dense"
+      : "Too low";
+
+  return (
+    <div className="space-y-3">
+      <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Writing Quality</p>
+
+      {/* Readability */}
+      <div className={`rounded-md px-3 py-2.5 ${scoreBg}`}>
+        <div className="flex items-baseline justify-between">
+          <p className="text-[10px] text-gray-500 font-medium">Readability</p>
+          <span className={`text-sm font-bold ${scoreColor}`}>
+            {readability.score === 0 ? "—" : readability.score}
+          </span>
+        </div>
+        <p className={`text-xs font-semibold mt-0.5 ${scoreColor}`}>{readability.label}</p>
+      </div>
+
+      {/* Word stats */}
+      {readability.wordCount > 0 && (
+        <div className="grid grid-cols-3 gap-2">
+          <div>
+            <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-0.5">Words</p>
+            <p className="text-sm font-semibold text-gray-800">{readability.wordCount}</p>
+          </div>
+          <div>
+            <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-0.5">Sentences</p>
+            <p className="text-sm font-semibold text-gray-800">{readability.sentenceCount}</p>
+          </div>
+          <div>
+            <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-0.5">Avg WPS</p>
+            <p className="text-sm font-semibold text-gray-800">{readability.avgWordsPerSentence}</p>
+          </div>
+        </div>
+      )}
+
+      {/* Keyword density */}
+      {density && (
+        <div className="space-y-1">
+          <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide">Keyword density</p>
+          <div className="flex items-center justify-between">
+            <span className={`text-xs font-medium ${densityColor}`}>{densityLabel}</span>
+            <span className="text-[11px] text-gray-500">
+              {density.count}× · {density.density.toFixed(2)}%
+            </span>
+          </div>
+          <div className="h-1 w-full rounded-full bg-gray-100 overflow-hidden">
+            <div
+              className={`h-full rounded-full transition-all ${
+                density.status === "good"
+                  ? "bg-green-400"
+                  : density.status === "high"
+                  ? "bg-red-400"
+                  : "bg-amber-400"
+              }`}
+              style={{ width: `${Math.min(100, (density.density / 3) * 100)}%` }}
+            />
+          </div>
+          <p className="text-[10px] text-gray-400">Target: 0.5 – 2.5%</p>
+        </div>
+      )}
+
+      {readability.wordCount === 0 && (
+        <p className="text-[11px] text-gray-400">Write something to see quality metrics.</p>
+      )}
+    </div>
+  );
+}
+
 /* ─── Main component ─────────────────────────────────────────────────── */
 
 interface Props {
@@ -342,9 +463,10 @@ interface Props {
   initialKeyword: string | null;
   onKeywordChange: (keyword: string) => void;
   analysisContent: unknown;
+  onCompetitorAvgWords?: (words: number | null) => void;
 }
 
-export function KeywordPanel({ articleId, initialKeyword, onKeywordChange, analysisContent }: Props) {
+export function KeywordPanel({ articleId, initialKeyword, onKeywordChange, analysisContent, onCompetitorAvgWords }: Props) {
   const [keyword, setKeyword] = useState(initialKeyword ?? "");
   const [lookupResult, setLookupResult] = useState<LookupResult | null>(null);
   const [lookupLoading, setLookupLoading] = useState(false);
@@ -508,10 +630,16 @@ export function KeywordPanel({ articleId, initialKeyword, onKeywordChange, analy
       <div className="space-y-3">
         <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Content Analysis</p>
         <p className="text-[10px] text-gray-400">
-          Auto-updates 3s after you stop typing. Click a word to expand.
+          Auto-updates 2s after you stop typing. Click a word to expand.
         </p>
         <ContentAnalysis content={analysisContent} />
       </div>
+
+      {/* ── Divider ── */}
+      <div className="border-t border-gray-100" />
+
+      {/* ── Writing quality ── */}
+      <WritingQuality content={analysisContent} targetKeyword={keyword} />
     </div>
   );
 }

@@ -1,0 +1,79 @@
+import { NextRequest } from "next/server";
+import { z } from "zod";
+import { db } from "@/lib/db";
+import { streamBriefOutline } from "@/lib/brief-builder";
+import type { ScrapedPage } from "@/lib/scraper";
+
+const schema = z.object({
+  briefId: z.string(),
+});
+
+function sse(event: string, data: unknown) {
+  return `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
+}
+
+export async function POST(req: NextRequest) {
+  const body = await req.json();
+  const parsed = schema.safeParse(body);
+  if (!parsed.success) {
+    return new Response(sse("error", { message: "Invalid request" }), {
+      status: 400,
+      headers: { "Content-Type": "text/event-stream" },
+    });
+  }
+
+  const brief = await db.articleBrief.findUnique({ where: { id: parsed.data.briefId } });
+  if (!brief) {
+    return new Response(sse("error", { message: "Brief not found" }), {
+      status: 404,
+      headers: { "Content-Type": "text/event-stream" },
+    });
+  }
+
+  if (!process.env.OPENAI_API_KEY) {
+    return new Response(sse("error", { message: "OPENAI_API_KEY not configured" }), {
+      status: 500,
+      headers: { "Content-Type": "text/event-stream" },
+    });
+  }
+
+  const competitors = (brief.competitors as unknown as ScrapedPage[]) ?? [];
+  const paaQuestions = (brief.paaQuestions as unknown as string[]) ?? [];
+
+  const stream = new ReadableStream({
+    async start(controller) {
+      const enc = new TextEncoder();
+      let fullJson = "";
+
+      try {
+        for await (const chunk of streamBriefOutline(brief.keyword, competitors, paaQuestions)) {
+          fullJson += chunk;
+          controller.enqueue(enc.encode(sse("chunk", { text: chunk })));
+        }
+
+        const outline = JSON.parse(fullJson);
+
+        await db.articleBrief.update({
+          where: { id: brief.id },
+          data: { outline: outline as object },
+        });
+
+        controller.enqueue(enc.encode(sse("done", { outline })));
+      } catch (err) {
+        controller.enqueue(
+          enc.encode(sse("error", { message: String(err) }))
+        );
+      } finally {
+        controller.close();
+      }
+    },
+  });
+
+  return new Response(stream, {
+    headers: {
+      "Content-Type": "text/event-stream",
+      "Cache-Control": "no-cache",
+      Connection: "keep-alive",
+    },
+  });
+}
