@@ -1,7 +1,13 @@
 import OpenAI from "openai";
 import type { ScrapedPage } from "./scraper";
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+const openai = new OpenAI({
+  apiKey: process.env.OPENROUTER_API_KEY,
+  baseURL: "https://openrouter.ai/api/v1",
+  defaultHeaders: { "HTTP-Referer": "https://seo-tool.internal" },
+});
+
+const MODEL = "meta-llama/llama-4-maverick:free";
 
 export interface BriefOutlineSection {
   heading: string;
@@ -60,13 +66,12 @@ ${paaQuestions.slice(0, 5).map((q, i) => `${i + 1}. ${q}`).join("\n")}
 Create a comprehensive brief that covers all angles competitors miss, answers PAA questions, and targets ~${Math.round(avgWords * 1.1)} words.`;
 
   const stream = await openai.chat.completions.create({
-    model: "gpt-4o-mini",
+    model: MODEL,
     messages: [
       { role: "system", content: systemPrompt },
       { role: "user", content: userPrompt },
     ],
     stream: true,
-    response_format: { type: "json_object" },
   });
 
   for await (const chunk of stream) {

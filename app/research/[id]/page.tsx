@@ -137,7 +137,7 @@ export default async function ReportPage({ params }: Props) {
             reportId={report.id}
             initialClusters={clusters}
             reportStatus={report.status}
-            hasOpenAI={!!process.env.OPENAI_API_KEY}
+            hasOpenAI={!!process.env.OPENROUTER_API_KEY}
             anyHighDrCompetitor={authority.some((a) => (a.dr ?? 0) > 65)}
           />
         </section>

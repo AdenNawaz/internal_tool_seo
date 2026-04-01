@@ -30,8 +30,8 @@ export async function POST(req: NextRequest) {
     });
   }
 
-  if (!process.env.OPENAI_API_KEY) {
-    return new Response(sse("error", { message: "OPENAI_API_KEY not configured" }), {
+  if (!process.env.OPENROUTER_API_KEY) {
+    return new Response(sse("error", { message: "OPENROUTER_API_KEY not configured" }), {
       status: 500,
       headers: { "Content-Type": "text/event-stream" },
     });

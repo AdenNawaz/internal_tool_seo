@@ -1,6 +1,12 @@
 import OpenAI from "openai";
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+const openai = new OpenAI({
+  apiKey: process.env.OPENROUTER_API_KEY,
+  baseURL: "https://openrouter.ai/api/v1",
+  defaultHeaders: { "HTTP-Referer": "https://seo-tool.internal" },
+});
+
+const MODEL = "meta-llama/llama-4-maverick:free";
 
 export interface KeywordCluster {
   clusterName: string;
@@ -53,13 +59,12 @@ ${ownKeywords.slice(0, 30).join(", ")}
 Group these into 4–8 content clusters. Mark addressesCompetitorGap as true for clusters built from gap keywords.`;
 
   const stream = await openai.chat.completions.create({
-    model: "gpt-4o-mini",
+    model: MODEL,
     messages: [
       { role: "system", content: systemPrompt },
       { role: "user", content: userPrompt },
     ],
     stream: true,
-    response_format: { type: "json_object" },
   });
 
   // Wrap in object so response_format: json_object is satisfied

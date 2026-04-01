@@ -101,7 +101,7 @@ export function ReportClient({
       </div>
 
       {!hasOpenAI && (
-        <p className="text-xs text-gray-400">Add OPENAI_API_KEY to enable cluster building.</p>
+        <p className="text-xs text-gray-400">Add OPENROUTER_API_KEY to enable cluster building.</p>
       )}
 
       {reportStatus !== "complete" && (

@@ -6,6 +6,19 @@ export interface ScrapedPage {
   headings: string[];
 }
 
+// Jina is free and unlimited — always try this first
+async function scrapeWithJina(url: string): Promise<string> {
+  const res = await fetch(`https://r.jina.ai/${url}`, {
+    headers: { Accept: "text/plain" },
+    signal: AbortSignal.timeout(15000),
+  });
+  if (!res.ok) throw new Error(`Jina error: ${res.status}`);
+  const text = await res.text();
+  if (text.length < 200) throw new Error("Jina returned too little content");
+  return text;
+}
+
+// Firecrawl costs 1 credit per page — only used when Jina fails
 async function scrapeWithFirecrawl(url: string): Promise<string> {
   const apiKey = process.env.FIRECRAWL_API_KEY;
   if (!apiKey) throw new Error("No Firecrawl key");
@@ -16,7 +29,9 @@ async function scrapeWithFirecrawl(url: string): Promise<string> {
       "Content-Type": "application/json",
       Authorization: `Bearer ${apiKey}`,
     },
-    body: JSON.stringify({ url, formats: ["markdown"] }),
+    // Only fetch markdown, no screenshots/links — minimises credit usage
+    body: JSON.stringify({ url, formats: ["markdown"], onlyMainContent: true }),
+    signal: AbortSignal.timeout(20000),
   });
 
   if (!res.ok) throw new Error(`Firecrawl error: ${res.status}`);
@@ -24,18 +39,9 @@ async function scrapeWithFirecrawl(url: string): Promise<string> {
   return (data.data?.markdown as string) ?? "";
 }
 
-async function scrapeWithJina(url: string): Promise<string> {
-  const jinaUrl = `https://r.jina.ai/${url}`;
-  const res = await fetch(jinaUrl, {
-    headers: { Accept: "text/plain" },
-  });
-  if (!res.ok) throw new Error(`Jina error: ${res.status}`);
-  return res.text();
-}
-
 function extractHeadings(markdown: string): string[] {
-  const lines = markdown.split("\n");
-  return lines
+  return markdown
+    .split("\n")
     .filter((l) => /^#{1,3}\s/.test(l))
     .map((l) => l.replace(/^#+\s+/, "").trim())
     .slice(0, 20);
@@ -48,10 +54,17 @@ function countWords(text: string): number {
 export async function scrapePage(url: string, title: string): Promise<ScrapedPage | null> {
   try {
     let markdown: string;
+
+    // Always try Jina first — free, no credit cost
     try {
-      markdown = await scrapeWithFirecrawl(url);
-    } catch {
       markdown = await scrapeWithJina(url);
+    } catch {
+      // Only fall back to Firecrawl if Jina fails
+      try {
+        markdown = await scrapeWithFirecrawl(url);
+      } catch {
+        return null;
+      }
     }
 
     if (!markdown || markdown.length < 100) return null;
@@ -59,7 +72,7 @@ export async function scrapePage(url: string, title: string): Promise<ScrapedPag
     return {
       url,
       title,
-      markdown: markdown.slice(0, 8000), // cap per page
+      markdown: markdown.slice(0, 8000),
       wordCount: countWords(markdown),
       headings: extractHeadings(markdown),
     };
@@ -71,14 +84,14 @@ export async function scrapePage(url: string, title: string): Promise<ScrapedPag
 export async function scrapeCompetitors(
   results: { url: string; title: string }[]
 ): Promise<ScrapedPage[]> {
-  const scraped = await Promise.allSettled(
-    results.slice(0, 5).map((r) => scrapePage(r.url, r.title))
-  );
+  // Cap at 3 competitors — enough for a brief, avoids burning credits on 5 simultaneous calls
+  const targets = results.slice(0, 3);
 
-  return scraped
-    .filter(
-      (r): r is PromiseFulfilledResult<ScrapedPage> =>
-        r.status === "fulfilled" && r.value !== null
-    )
-    .map((r) => r.value);
+  // Sequential rather than parallel — prevents hammering Firecrawl if Jina fails for all
+  const scraped: ScrapedPage[] = [];
+  for (const r of targets) {
+    const page = await scrapePage(r.url, r.title);
+    if (page) scraped.push(page);
+  }
+  return scraped;
 }
