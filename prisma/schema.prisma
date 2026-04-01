@@ -17,6 +17,9 @@ model Article {
   slug            String?
   checklistScore  Int?
   publishedUrl    String?
+  authorEmail     String?
+  clusterId       String?
+  clusterName     String?
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 }
@@ -56,4 +59,24 @@ model Ranking {
   volume             Int?
   refreshOpportunity Boolean  @default(false)
   checkedAt          DateTime @default(now())
+}
+
+model SovSnapshot {
+  id           String   @id @default(auto()) @map("_id") @db.ObjectId
+  checkedAt    DateTime @default(now())
+  companySOV   Float
+  competitors  Json
+  keywordCount Int
+}
+
+model TrendingAlert {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  keyword     String
+  cluster     String
+  reportId    String   @db.ObjectId
+  volumeNow   Int
+  volumePrev  Int
+  growthPct   Float
+  checkedAt   DateTime @default(now())
+  dismissed   Boolean  @default(false)
 }

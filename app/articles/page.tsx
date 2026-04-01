@@ -9,6 +9,9 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { NewArticleButton } from "@/components/new-article-button";
+import { ArticlesFilter } from "@/components/articles-filter";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 
 export const dynamic = "force-dynamic";
 
@@ -22,8 +25,17 @@ function formatDate(date: Date) {
   }).format(new Date(date));
 }
 
-export default async function ArticlesPage() {
+interface Props {
+  searchParams: { mine?: string };
+}
+
+export default async function ArticlesPage({ searchParams }: Props) {
+  const mine = searchParams.mine === "true";
+  const session = await getServerSession(authOptions);
+  const userEmail = session?.user?.email ?? null;
+
   const articles = await db.article.findMany({
+    where: mine && userEmail ? { authorEmail: userEmail } : undefined,
     orderBy: { updatedAt: "desc" },
   });
 
@@ -35,14 +47,18 @@ export default async function ArticlesPage() {
             <h1 className="text-2xl font-semibold text-gray-900">Articles</h1>
             <p className="text-sm text-gray-500 mt-1">
               {articles.length} {articles.length === 1 ? "article" : "articles"}
+              {mine && " by you"}
             </p>
           </div>
-          <NewArticleButton />
+          <div className="flex items-center gap-3">
+            <ArticlesFilter mine={mine} />
+            <NewArticleButton />
+          </div>
         </div>
 
         {articles.length === 0 ? (
           <div className="text-center py-24 text-gray-400">
-            <p className="text-base">No articles yet.</p>
+            <p className="text-base">{mine ? "No articles by you yet." : "No articles yet."}</p>
             <p className="text-sm mt-1">Click &ldquo;New Article&rdquo; to get started.</p>
           </div>
         ) : (
