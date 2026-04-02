@@ -43,7 +43,14 @@ function LoginForm() {
         {/* Dev skip button — only rendered in development */}
         {process.env.NODE_ENV === "development" && (
           <button
-            onClick={() => signIn("dev-skip", { callbackUrl: "/articles" })}
+            onClick={async () => {
+              const res = await signIn("dev-skip", {
+                redirect: false,
+                callbackUrl: "/articles",
+              });
+              if (res?.url) window.location.href = res.url;
+              else if (res?.ok) window.location.href = "/articles";
+            }}
             className="w-full rounded-lg border border-dashed border-gray-200 px-4 py-2.5 text-sm text-gray-400 hover:text-gray-600 hover:border-gray-300 transition-colors"
           >
             Skip sign-in (dev only)

@@ -7,7 +7,12 @@ const openai = new OpenAI({
   defaultHeaders: { "HTTP-Referer": "https://seo-tool.internal" },
 });
 
-const MODEL = "meta-llama/llama-4-maverick:free";
+const MODELS = [
+  "meta-llama/llama-3.3-70b-instruct:free",
+  "google/gemma-3-27b-it:free",
+  "nousresearch/hermes-3-llama-3.1-405b:free",
+  "google/gemma-3-12b-it:free",
+];
 
 export interface BriefOutlineSection {
   heading: string;
@@ -65,14 +70,26 @@ ${paaQuestions.slice(0, 5).map((q, i) => `${i + 1}. ${q}`).join("\n")}
 
 Create a comprehensive brief that covers all angles competitors miss, answers PAA questions, and targets ~${Math.round(avgWords * 1.1)} words.`;
 
-  const stream = await openai.chat.completions.create({
-    model: MODEL,
-    messages: [
-      { role: "system", content: systemPrompt },
-      { role: "user", content: userPrompt },
-    ],
-    stream: true,
-  });
+  let stream: Awaited<ReturnType<typeof openai.chat.completions.create>> | null = null;
+  let lastError: unknown;
+  for (const model of MODELS) {
+    try {
+      stream = await openai.chat.completions.create({
+        model,
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userPrompt },
+        ],
+        stream: true,
+      });
+      break;
+    } catch (err: unknown) {
+      const status = (err as { status?: number }).status;
+      if (status === 429 || status === 404) { lastError = err; continue; }
+      throw err;
+    }
+  }
+  if (!stream) throw lastError ?? new Error("All models rate-limited, try again in a moment");
 
   for await (const chunk of stream) {
     const delta = chunk.choices[0]?.delta?.content;

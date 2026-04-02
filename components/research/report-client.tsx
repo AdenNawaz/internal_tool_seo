@@ -43,12 +43,16 @@ export function ReportClient({
         const { done, value } = await reader.read();
         if (done) break;
         const text = dec.decode(value);
-        for (const line of text.split("\n\n")) {
-          if (!line.startsWith("data:")) continue;
-          const payload = JSON.parse(line.slice(5).trim());
-          if (payload.message) setStatusMsg(payload.message);
-          if (payload.clusters) setClusters(payload.clusters);
-          if (payload.message?.toLowerCase().includes("error")) setError(payload.message);
+        for (const chunk of text.split("\n\n")) {
+          for (const line of chunk.split("\n")) {
+            if (!line.startsWith("data:")) continue;
+            try {
+              const payload = JSON.parse(line.slice(5).trim());
+              if (payload.message) setStatusMsg(payload.message);
+              if (payload.clusters) setClusters(payload.clusters);
+              if (payload.message?.toLowerCase().includes("error")) setError(payload.message);
+            } catch { /* ignore malformed */ }
+          }
         }
       }
     } catch (e) {

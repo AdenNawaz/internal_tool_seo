@@ -6,7 +6,13 @@ const openai = new OpenAI({
   defaultHeaders: { "HTTP-Referer": "https://seo-tool.internal" },
 });
 
-const MODEL = "meta-llama/llama-4-maverick:free";
+// Free models in priority order — tries next if one is rate-limited
+const MODELS = [
+  "meta-llama/llama-3.3-70b-instruct:free",
+  "google/gemma-3-27b-it:free",
+  "nousresearch/hermes-3-llama-3.1-405b:free",
+  "google/gemma-3-12b-it:free",
+];
 
 export interface KeywordCluster {
   clusterName: string;
@@ -58,16 +64,28 @@ ${ownKeywords.slice(0, 30).join(", ")}
 
 Group these into 4–8 content clusters. Mark addressesCompetitorGap as true for clusters built from gap keywords.`;
 
-  const stream = await openai.chat.completions.create({
-    model: MODEL,
-    messages: [
-      { role: "system", content: systemPrompt },
-      { role: "user", content: userPrompt },
-    ],
-    stream: true,
-  });
+  // Try each model in order until one works
+  let stream: Awaited<ReturnType<typeof openai.chat.completions.create>> | null = null;
+  let lastError: unknown;
+  for (const model of MODELS) {
+    try {
+      stream = await openai.chat.completions.create({
+        model,
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userPrompt },
+        ],
+        stream: true,
+      });
+      break;
+    } catch (err: unknown) {
+      const status = (err as { status?: number }).status;
+      if (status === 429 || status === 404) { lastError = err; continue; }
+      throw err;
+    }
+  }
+  if (!stream) throw lastError ?? new Error("All models rate-limited, try again in a moment");
 
-  // Wrap in object so response_format: json_object is satisfied
   let started = false;
   for await (const chunk of stream) {
     const delta = chunk.choices[0]?.delta?.content ?? "";

@@ -32,10 +32,15 @@ export function NewResearchButton() {
         const { done, value } = await reader.read();
         if (done) break;
         const text = dec.decode(value);
-        for (const line of text.split("\n\n")) {
-          if (line.startsWith("data:")) {
-            const payload = JSON.parse(line.slice(5).trim());
-            if (payload.reportId) reportId = payload.reportId;
+        // Each SSE message is separated by \n\n; each message has lines like "event: ...\ndata: ..."
+        for (const chunk of text.split("\n\n")) {
+          for (const line of chunk.split("\n")) {
+            if (line.startsWith("data:")) {
+              try {
+                const payload = JSON.parse(line.slice(5).trim());
+                if (payload.reportId) reportId = payload.reportId;
+              } catch { /* ignore malformed lines */ }
+            }
           }
         }
       }

@@ -47,13 +47,32 @@ export async function POST(
           send("chunk", { text: chunk });
         }
 
-        // OpenAI json_object wraps in an object, extract the array
+        // Extract JSON array — Llama may wrap it in markdown code fences or an object key
         let clusters: unknown[];
         try {
-          const parsed = JSON.parse(fullJson);
-          clusters = Array.isArray(parsed) ? parsed : (parsed.clusters ?? []);
+          // Strip markdown code fences if present
+          const cleaned = fullJson
+            .replace(/```json\s*/gi, "")
+            .replace(/```\s*/gi, "")
+            .trim();
+          const parsed = JSON.parse(cleaned);
+          if (Array.isArray(parsed)) {
+            clusters = parsed;
+          } else if (parsed && typeof parsed === "object") {
+            // Try common wrapper keys
+            const val = parsed.clusters ?? parsed.data ?? parsed.result ?? Object.values(parsed)[0];
+            clusters = Array.isArray(val) ? val : [];
+          } else {
+            clusters = [];
+          }
         } catch {
-          clusters = [];
+          // Last resort: find a JSON array anywhere in the response
+          const match = fullJson.match(/\[[\s\S]*\]/);
+          if (match) {
+            try { clusters = JSON.parse(match[0]); } catch { clusters = []; }
+          } else {
+            clusters = [];
+          }
         }
 
         await db.researchReport.update({
