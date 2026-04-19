@@ -31,10 +31,21 @@ model ArticleBrief {
   competitors        Json
   competitorAvgWords Int
   outline            Json?
+  editableOutline    Json?
   paaQuestions       Json?
   status             String   @default("fetching")
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
+}
+
+model ToneProfile {
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  type       String
+  sourceUrls Json
+  profile    String
+  examples   Json
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 }
 
 model ResearchReport {

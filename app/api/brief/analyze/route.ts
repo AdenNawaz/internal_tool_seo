@@ -51,7 +51,9 @@ export async function POST(req: NextRequest) {
           controller.enqueue(enc.encode(sse("chunk", { text: chunk })));
         }
 
-        const outline = JSON.parse(fullJson);
+        const cleaned = fullJson.replace(/```json\s*/gi, "").replace(/```\s*/gi, "").trim();
+        const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
+        const outline = JSON.parse(jsonMatch ? jsonMatch[0] : cleaned);
 
         await db.articleBrief.update({
           where: { id: brief.id },

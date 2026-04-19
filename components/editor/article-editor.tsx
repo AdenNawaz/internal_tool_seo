@@ -56,6 +56,7 @@ export function ArticleEditor({
   const analysisTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pendingRef = useRef<Record<string, unknown>>({});
   const contentRef = useRef<unknown>(initialContent);
+  const replaceContentRef = useRef<((blocks: unknown[]) => void) | null>(null);
 
   const scheduleSave = useCallback(
     (patch: Record<string, unknown>) => {
@@ -242,6 +243,7 @@ export function ArticleEditor({
             <BlockNoteEditorComponent
               initialContent={initialContent}
               onChange={handleContentChange}
+              onMount={(fn) => { replaceContentRef.current = fn; }}
             />
           </div>
         </div>
@@ -288,6 +290,10 @@ export function ArticleEditor({
                       articleId={id}
                       keyword={keyword}
                       onCompetitorAvgWords={setCompetitorAvgWords}
+                      onInjectContent={(blocks) => {
+                        replaceContentRef.current?.(blocks);
+                        handleContentChange(blocks);
+                      }}
                     />
                   </div>
                 )}

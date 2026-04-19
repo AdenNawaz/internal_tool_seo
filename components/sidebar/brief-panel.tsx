@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { OutlineEditor } from "./outline-editor";
+import type { OutlineItem } from "@/lib/outline-types";
 
 interface Competitor {
   url: string;
@@ -9,15 +11,15 @@ interface Competitor {
   headings: string[];
 }
 
-interface OutlineSection {
+interface AiOutlineSection {
   heading: string;
   notes: string;
   wordTarget: number;
 }
 
-interface Outline {
+interface AiOutline {
   intro: string;
-  sections: OutlineSection[];
+  sections: AiOutlineSection[];
   conclusion: string;
   totalWordTarget: number;
 }
@@ -27,7 +29,8 @@ interface BriefData {
   keyword: string;
   competitors: Competitor[];
   competitorAvgWords: number;
-  outline: Outline | null;
+  outline: AiOutline | null;
+  editableOutline: OutlineItem[] | null;
   paaQuestions: string[] | null;
   status: string;
 }
@@ -36,16 +39,31 @@ interface Props {
   articleId: string;
   keyword: string;
   onCompetitorAvgWords: (words: number | null) => void;
+  onInjectContent?: (blocks: unknown[]) => void;
 }
 
-export function BriefPanel({ articleId, keyword, onCompetitorAvgWords }: Props) {
+function deriveItems(aiOutline: AiOutline): OutlineItem[] {
+  return aiOutline.sections.map((s) => ({
+    id: crypto.randomUUID(),
+    level: 2 as const,
+    text: s.heading,
+    locked: false,
+    guidance: s.notes,
+    seoType: "seo" as const,
+  }));
+}
+
+export function BriefPanel({ articleId, keyword, onCompetitorAvgWords, onInjectContent }: Props) {
   const [brief, setBrief] = useState<BriefData | null>(null);
   const [fetching, setFetching] = useState(false);
   const [analyzing, setAnalyzing] = useState(false);
+  const [generating, setGenerating] = useState(false);
+  const [generationStatus, setGenerationStatus] = useState("Generating…");
+  const [generated, setGenerated] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [streamPreview, setStreamPreview] = useState("");
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // Load existing brief on mount
   useEffect(() => {
     fetch(`/api/brief/fetch?articleId=${articleId}`)
       .then((r) => r.json())
@@ -57,9 +75,7 @@ export function BriefPanel({ articleId, keyword, onCompetitorAvgWords }: Props) 
         }
       })
       .catch(() => {});
-    return () => {
-      if (pollRef.current) clearInterval(pollRef.current);
-    };
+    return () => { if (pollRef.current) clearInterval(pollRef.current); };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [articleId]);
 
@@ -88,7 +104,7 @@ export function BriefPanel({ articleId, keyword, onCompetitorAvgWords }: Props) 
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Failed");
-      setBrief({ id: data.briefId, keyword, competitors: [], competitorAvgWords: 0, outline: null, paaQuestions: null, status: "fetching" });
+      setBrief({ id: data.briefId, keyword, competitors: [], competitorAvgWords: 0, outline: null, editableOutline: null, paaQuestions: null, status: "fetching" });
       startPolling(data.briefId);
     } catch (e) {
       setError(String(e));
@@ -110,19 +126,29 @@ export function BriefPanel({ articleId, keyword, onCompetitorAvgWords }: Props) 
 
       const reader = res.body?.getReader();
       if (!reader) throw new Error("No stream");
-
       const dec = new TextDecoder();
+
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
         const text = dec.decode(value);
-        const lines = text.split("\n\n");
-        for (const line of lines) {
-          if (line.startsWith("data:")) {
-            const payload = JSON.parse(line.slice(5).trim());
-            if (payload.outline) {
-              setBrief((prev) => prev ? { ...prev, outline: payload.outline } : prev);
-            }
+        for (const chunk of text.split("\n\n")) {
+          for (const line of chunk.split("\n")) {
+            if (!line.startsWith("data:")) continue;
+            try {
+              const payload = JSON.parse(line.slice(5).trim());
+              if (payload.outline) {
+                const aiOutline = payload.outline as AiOutline;
+                const items = deriveItems(aiOutline);
+                // Auto-save editable outline derived from AI outline
+                await fetch("/api/brief/save-outline", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ briefId: brief.id, outline: items }),
+                });
+                setBrief((prev) => prev ? { ...prev, outline: aiOutline, editableOutline: items } : prev);
+              }
+            } catch { /* ignore parse errors */ }
           }
         }
       }
@@ -132,6 +158,57 @@ export function BriefPanel({ articleId, keyword, onCompetitorAvgWords }: Props) 
       setAnalyzing(false);
     }
   }
+
+  async function handleGenerateContent() {
+    if (!brief) return;
+    setGenerating(true);
+    setGenerationStatus("Writing article…");
+    setStreamPreview("");
+    setError(null);
+
+    try {
+      const res = await fetch("/api/content/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ articleId, briefId: brief.id }),
+      });
+
+      const reader = res.body?.getReader();
+      if (!reader) throw new Error("No stream");
+      const dec = new TextDecoder();
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        const text = dec.decode(value);
+        for (const chunk of text.split("\n\n")) {
+          for (const line of chunk.split("\n")) {
+            if (!line.startsWith("data:")) continue;
+            try {
+              const payload = JSON.parse(line.slice(5).trim());
+              if (payload.message) setGenerationStatus(payload.message);
+              if (payload.text) setStreamPreview((p) => p + payload.text);
+              if (payload.blocks) {
+                onInjectContent?.(payload.blocks);
+                setGenerated(true);
+                setStreamPreview("");
+                setGenerationStatus("Draft complete");
+              }
+            } catch { /* ignore */ }
+          }
+        }
+      }
+    } catch (e) {
+      setError(String(e));
+    } finally {
+      setGenerating(false);
+    }
+  }
+
+  // Derive outline items for display
+  const outlineItems: OutlineItem[] | null =
+    brief?.editableOutline ??
+    (brief?.outline ? deriveItems(brief.outline) : null);
 
   if (!brief) {
     return (
@@ -165,8 +242,6 @@ export function BriefPanel({ articleId, keyword, onCompetitorAvgWords }: Props) 
       </div>
     );
   }
-
-  const outline = brief.outline;
 
   return (
     <div className="space-y-4">
@@ -203,8 +278,17 @@ export function BriefPanel({ articleId, keyword, onCompetitorAvgWords }: Props) 
         </div>
       )}
 
-      {/* Outline or generate button */}
-      {!outline ? (
+      {/* Outline or generate-outline button */}
+      {outlineItems ? (
+        <OutlineEditor
+          briefId={brief.id}
+          initialItems={outlineItems}
+          onGenerateContent={handleGenerateContent}
+          generating={generating}
+          generationStatus={generationStatus}
+          generated={generated}
+        />
+      ) : (
         <button
           onClick={handleAnalyze}
           disabled={analyzing}
@@ -212,23 +296,20 @@ export function BriefPanel({ articleId, keyword, onCompetitorAvgWords }: Props) 
         >
           {analyzing ? "Generating outline…" : "Generate outline with AI"}
         </button>
-      ) : (
-        <div className="space-y-3">
-          <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide">
-            Outline · ~{outline.totalWordTarget.toLocaleString()} words
-          </p>
-          <div className="space-y-0.5">
-            <p className="text-[11px] text-gray-500 italic">Intro: {outline.intro}</p>
-          </div>
-          {outline.sections.map((s, i) => (
-            <div key={i} className="border-l-2 border-gray-100 pl-2.5 space-y-0.5">
-              <p className="text-xs font-medium text-gray-700">{s.heading}</p>
-              <p className="text-[11px] text-gray-500">{s.notes}</p>
-              <p className="text-[10px] text-gray-400">~{s.wordTarget} words</p>
-            </div>
-          ))}
-          <p className="text-[11px] text-gray-500 italic">Conclusion: {outline.conclusion}</p>
+      )}
+
+      {/* Streaming preview during generation */}
+      {streamPreview && (
+        <div className="mt-2 p-2 bg-gray-50 rounded-md border border-gray-100 max-h-40 overflow-y-auto">
+          <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-1">Generating…</p>
+          <pre className="text-[10px] text-gray-500 whitespace-pre-wrap font-sans leading-relaxed">
+            {streamPreview}
+          </pre>
         </div>
+      )}
+
+      {generated && !streamPreview && (
+        <p className="text-[11px] text-green-600 font-medium">Draft complete — content loaded into editor</p>
       )}
 
       {error && <p className="text-xs text-red-500">{error}</p>}
