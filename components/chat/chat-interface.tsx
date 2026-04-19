@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { Send, RotateCcw, Loader2 } from "lucide-react";
 
 interface Message {
@@ -224,7 +225,20 @@ export function ChatInterface() {
     <div className="flex flex-col h-screen bg-white">
       {/* Header */}
       <div className="flex items-center justify-between px-6 py-3 border-b border-gray-100">
-        <p className="text-sm font-semibold text-gray-800">SEO Research Assistant</p>
+        <div className="flex items-center gap-6">
+          <p className="text-sm font-bold text-gray-900">SEO Tool</p>
+          {[
+            { href: "/chat", label: "New research" },
+            { href: "/articles", label: "Articles" },
+            { href: "/research", label: "Research" },
+            { href: "/dashboard", label: "Dashboard" },
+            { href: "/settings/tone", label: "Settings" },
+          ].map((l) => (
+            <Link key={l.href} href={l.href} className={`text-sm transition-colors ${l.href === "/chat" ? "text-gray-900 font-medium" : "text-gray-400 hover:text-gray-700"}`}>
+              {l.label}
+            </Link>
+          ))}
+        </div>
         <button onClick={clearHistory} className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-gray-700 transition-colors">
           <RotateCcw size={12} /> New conversation
         </button>
