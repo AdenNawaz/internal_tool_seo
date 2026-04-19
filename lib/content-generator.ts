@@ -27,6 +27,9 @@ interface GenerateParams {
     wordCountRange: { min: number; max: number };
     contentGaps: string[];
     paaQuestions: string[];
+    gptQueries?: string[];
+    geoQuestions?: string[];
+    aeoQuestions?: Array<{ question: string; format: string }>;
   };
 }
 
@@ -67,6 +70,9 @@ ${outlineText}
 
 PAA QUESTIONS TO ANSWER (work these into the FAQ section or as natural subheadings):
 ${brief.paaQuestions.join("\n") || "None"}
+${brief.gptQueries?.length ? `\nGPT AND AI QUERIES TO ADDRESS (work these into the content naturally — these are what people ask AI tools about this topic):\n${brief.gptQueries.join("\n")}` : ""}
+${brief.geoQuestions?.length ? `\nGEO QUESTIONS (write content that directly answers these for AI-generated responses):\n${brief.geoQuestions.join("\n")}` : ""}
+${brief.aeoQuestions?.length ? `\nAEO QUESTIONS (write a direct, concise answer under 50 words for each for featured snippet targeting):\n${brief.aeoQuestions.map((q) => `${q.question} [format: ${q.format}]`).join("\n")}` : ""}
 
 Write the full article following the outline exactly. Do not add or remove headings. Do not add a conclusion section unless it is in the outline.
 Return the content as markdown with ## for H2 and ### for H3.`;

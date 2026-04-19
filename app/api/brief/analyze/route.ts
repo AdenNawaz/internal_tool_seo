@@ -2,6 +2,8 @@ import { NextRequest } from "next/server";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { streamBriefOutline } from "@/lib/brief-builder";
+import { findGptQueries } from "@/lib/gpt-queries";
+import { generateGeoAeoQuestions } from "@/lib/geo-aeo";
 import type { ScrapedPage } from "@/lib/scraper";
 
 const schema = z.object({
@@ -40,6 +42,15 @@ export async function POST(req: NextRequest) {
   const competitors = (brief.competitors as unknown as ScrapedPage[]) ?? [];
   const paaQuestions = (brief.paaQuestions as unknown as string[]) ?? [];
 
+  // Start parallel enrichment before streaming (non-blocking)
+  const gptQueriesPromise = findGptQueries(brief.keyword, paaQuestions);
+  const geoAeoPromise = generateGeoAeoQuestions({
+    keyword: brief.keyword,
+    contentType: "blog",
+    paaQuestions,
+    briefSummary: "",
+  });
+
   const stream = new ReadableStream({
     async start(controller) {
       const enc = new TextEncoder();
@@ -55,16 +66,25 @@ export async function POST(req: NextRequest) {
         const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
         const outline = JSON.parse(jsonMatch ? jsonMatch[0] : cleaned);
 
+        // Await enrichment
+        const [gptResult, geoAeoResult] = await Promise.allSettled([gptQueriesPromise, geoAeoPromise]);
+        const gptQueries = gptResult.status === "fulfilled" ? gptResult.value.combined : [];
+        const geoQuestions = geoAeoResult.status === "fulfilled" ? geoAeoResult.value.geoQuestions : [];
+        const aeoQuestions = geoAeoResult.status === "fulfilled" ? geoAeoResult.value.aeoQuestions : [];
+
         await db.articleBrief.update({
           where: { id: brief.id },
-          data: { outline: outline as object },
+          data: {
+            outline: outline as object,
+            gptQueries: gptQueries as object[],
+            geoQuestions: geoQuestions as object[],
+            aeoQuestions: aeoQuestions as object[],
+          },
         });
 
-        controller.enqueue(enc.encode(sse("done", { outline })));
+        controller.enqueue(enc.encode(sse("done", { outline, gptQueries, geoQuestions, aeoQuestions })));
       } catch (err) {
-        controller.enqueue(
-          enc.encode(sse("error", { message: String(err) }))
-        );
+        controller.enqueue(enc.encode(sse("error", { message: String(err) })));
       } finally {
         controller.close();
       }

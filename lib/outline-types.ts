@@ -7,4 +7,6 @@ export interface OutlineItem {
   locked: boolean;
   guidance?: string;
   seoType?: SeoType;
+  isNew?: boolean;
+  markedForRemoval?: boolean;
 }

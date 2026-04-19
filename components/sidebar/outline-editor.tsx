@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useRef } from "react";
+import { useState } from "react";
 import {
   DndContext,
   closestCenter,
@@ -41,106 +41,101 @@ interface ItemProps {
 function SortableItem({ item, selected, onSelect, onTextChange, onLevelToggle, onDelete }: ItemProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: item.id,
-    disabled: item.locked,
+    disabled: item.locked || item.markedForRemoval,
   });
 
   return (
-    <div
-      ref={setNodeRef}
-      style={{ transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.4 : 1 }}
-      onClick={onSelect}
-      className={`group flex items-center gap-1 rounded px-1 py-1 cursor-pointer ${
-        selected ? "bg-blue-50" : "hover:bg-gray-50"
-      } ${item.level === 3 ? "ml-5" : ""}`}
-    >
-      <button
-        {...attributes}
-        {...listeners}
-        tabIndex={-1}
-        className={`text-gray-300 hover:text-gray-500 flex-shrink-0 ${item.locked ? "invisible" : ""}`}
-      >
-        <GripVertical size={13} />
-      </button>
-
-      <input
-        value={item.text}
-        onChange={(e) => onTextChange(e.target.value)}
-        onClick={(e) => e.stopPropagation()}
-        className={`flex-1 min-w-0 bg-transparent outline-none border-b border-transparent focus:border-gray-300 ${
-          item.level === 2 ? "text-[12px] font-medium text-gray-800" : "text-[11px] text-gray-500"
+    <div className={item.level === 3 ? "ml-5" : ""}>
+      <div
+        ref={setNodeRef}
+        style={{ transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.4 : 1 }}
+        onClick={onSelect}
+        className={`group flex items-center gap-1 rounded px-1 py-1 cursor-pointer ${
+          item.markedForRemoval
+            ? "opacity-50 line-through bg-red-50"
+            : selected
+            ? "bg-blue-50"
+            : "hover:bg-gray-50"
         }`}
-        placeholder="Heading…"
-      />
+      >
+        <button
+          {...attributes}
+          {...listeners}
+          tabIndex={-1}
+          className={`text-gray-300 hover:text-gray-500 flex-shrink-0 ${item.locked || item.markedForRemoval ? "invisible" : ""}`}
+        >
+          <GripVertical size={13} />
+        </button>
 
-      {item.seoType && TYPE_BADGE[item.seoType] && (
-        <span className={`text-[9px] font-semibold px-1 py-0.5 rounded flex-shrink-0 ${TYPE_BADGE[item.seoType].cls}`}>
-          {TYPE_BADGE[item.seoType].label}
-        </span>
-      )}
+        <input
+          value={item.text}
+          onChange={(e) => onTextChange(e.target.value)}
+          onClick={(e) => e.stopPropagation()}
+          disabled={item.markedForRemoval}
+          className={`flex-1 min-w-0 bg-transparent outline-none border-b border-transparent focus:border-gray-300 ${
+            item.level === 2 ? "text-[12px] font-medium text-gray-800" : "text-[11px] text-gray-500"
+          } ${item.markedForRemoval ? "pointer-events-none" : ""}`}
+          placeholder="Heading…"
+        />
 
-      <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
-        {item.locked ? (
-          <Lock size={11} className="text-gray-300" />
-        ) : (
-          <>
-            <button
-              onClick={(e) => { e.stopPropagation(); onLevelToggle(); }}
-              className="text-[9px] font-bold w-5 h-5 flex items-center justify-center rounded text-gray-400 hover:text-gray-700 hover:bg-gray-100"
-              title="Toggle H2/H3"
-            >
-              H{item.level}
-            </button>
-            <button
-              onClick={(e) => { e.stopPropagation(); onDelete(); }}
-              className="w-5 h-5 flex items-center justify-center rounded text-gray-300 hover:text-red-500 hover:bg-red-50"
-              title="Delete"
-            >
-              <Trash2 size={11} />
-            </button>
-          </>
+        {item.isNew && (
+          <span className="text-[9px] font-bold px-1 py-0.5 rounded bg-gray-900 text-white flex-shrink-0">NEW</span>
         )}
+
+        {item.seoType && TYPE_BADGE[item.seoType] && (
+          <span className={`text-[9px] font-semibold px-1 py-0.5 rounded flex-shrink-0 ${TYPE_BADGE[item.seoType].cls}`}>
+            {TYPE_BADGE[item.seoType].label}
+          </span>
+        )}
+
+        <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
+          {item.locked ? (
+            <Lock size={11} className="text-gray-300" />
+          ) : (
+            <>
+              <button
+                onClick={(e) => { e.stopPropagation(); onLevelToggle(); }}
+                className="text-[9px] font-bold w-5 h-5 flex items-center justify-center rounded text-gray-400 hover:text-gray-700 hover:bg-gray-100"
+                title="Toggle H2/H3"
+              >
+                H{item.level}
+              </button>
+              <button
+                onClick={(e) => { e.stopPropagation(); onDelete(); }}
+                className="w-5 h-5 flex items-center justify-center rounded text-gray-300 hover:text-red-500 hover:bg-red-50"
+                title="Delete"
+              >
+                <Trash2 size={11} />
+              </button>
+            </>
+          )}
+        </div>
       </div>
+
+      {/* AEO hint shown when selected */}
+      {selected && item.seoType === "aeo" && item.guidance && (
+        <p className="text-[9px] text-green-600 ml-6 mt-0.5 leading-tight">{item.guidance}</p>
+      )}
     </div>
   );
 }
 
 interface Props {
-  briefId: string;
-  initialItems: OutlineItem[];
+  items: OutlineItem[];
+  onItemsChange: (items: OutlineItem[]) => void;
   onGenerateContent: () => void;
   generating: boolean;
   generationStatus: string;
   generated: boolean;
 }
 
-export function OutlineEditor({ briefId, initialItems, onGenerateContent, generating, generationStatus, generated }: Props) {
-  const [items, setItems] = useState<OutlineItem[]>(initialItems);
+export function OutlineEditor({ items, onItemsChange, onGenerateContent, generating, generationStatus, generated }: Props) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const sensors = useSensors(
     useSensor(PointerSensor),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   );
-
-  const scheduleAutoSave = useCallback(
-    (updated: OutlineItem[]) => {
-      if (saveTimer.current) clearTimeout(saveTimer.current);
-      saveTimer.current = setTimeout(() => {
-        fetch("/api/brief/save-outline", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ briefId, outline: updated }),
-        }).catch(() => {});
-      }, 500);
-    },
-    [briefId]
-  );
-
-  function update(updated: OutlineItem[]) {
-    setItems(updated);
-    scheduleAutoSave(updated);
-  }
 
   function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event;
@@ -148,7 +143,7 @@ export function OutlineEditor({ briefId, initialItems, onGenerateContent, genera
     const oldIdx = items.findIndex((i) => i.id === active.id);
     const newIdx = items.findIndex((i) => i.id === over.id);
     if (items[newIdx]?.locked) return;
-    update(arrayMove(items, oldIdx, newIdx));
+    onItemsChange(arrayMove(items, oldIdx, newIdx));
   }
 
   function addHeading(level: 2 | 3) {
@@ -162,35 +157,56 @@ export function OutlineEditor({ briefId, initialItems, onGenerateContent, genera
     const selectedIdx = selectedId ? items.findIndex((i) => i.id === selectedId) : items.length - 1;
     const insertAt = selectedIdx >= 0 ? selectedIdx + 1 : items.length;
     const newItems = [...items.slice(0, insertAt), newItem, ...items.slice(insertAt)];
-    update(newItems);
+    onItemsChange(newItems);
     setSelectedId(newItem.id);
   }
+
+  const visibleItems = items.filter((i) => !i.markedForRemoval);
+  const removedItems = items.filter((i) => i.markedForRemoval);
 
   return (
     <div className="space-y-2">
       <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide">Outline</p>
 
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-        <SortableContext items={items.map((i) => i.id)} strategy={verticalListSortingStrategy}>
+        <SortableContext items={visibleItems.map((i) => i.id)} strategy={verticalListSortingStrategy}>
           <div className="space-y-0.5">
-            {items.map((item) => (
+            {visibleItems.map((item) => (
               <SortableItem
                 key={item.id}
                 item={item}
                 selected={selectedId === item.id}
                 onSelect={() => setSelectedId(item.id)}
                 onTextChange={(text) =>
-                  update(items.map((i) => (i.id === item.id ? { ...i, text } : i)))
+                  onItemsChange(items.map((i) => (i.id === item.id ? { ...i, text } : i)))
                 }
                 onLevelToggle={() =>
-                  update(items.map((i) => (i.id === item.id ? { ...i, level: i.level === 2 ? 3 : 2 } : i)))
+                  onItemsChange(items.map((i) => (i.id === item.id ? { ...i, level: i.level === 2 ? 3 : 2 } : i)))
                 }
-                onDelete={() => update(items.filter((i) => i.id !== item.id))}
+                onDelete={() => onItemsChange(items.filter((i) => i.id !== item.id))}
               />
             ))}
           </div>
         </SortableContext>
       </DndContext>
+
+      {/* Sections marked for removal */}
+      {removedItems.length > 0 && (
+        <div className="space-y-0.5 pt-1">
+          <p className="text-[9px] font-semibold text-red-400 uppercase tracking-wide">Marked for removal</p>
+          {removedItems.map((item) => (
+            <div key={item.id} className="flex items-center gap-2 px-1">
+              <span className="flex-1 text-[11px] text-red-400 line-through truncate">{item.text}</span>
+              <button
+                onClick={() => onItemsChange(items.filter((i) => i.id !== item.id))}
+                className="text-[9px] text-red-400 hover:text-red-600"
+              >
+                Remove
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
 
       <div className="flex gap-3 pt-0.5">
         <button
@@ -209,7 +225,7 @@ export function OutlineEditor({ briefId, initialItems, onGenerateContent, genera
 
       <button
         onClick={onGenerateContent}
-        disabled={generating || items.length === 0}
+        disabled={generating || items.filter((i) => !i.markedForRemoval).length === 0}
         className="w-full text-xs font-medium bg-gray-900 text-white rounded-md px-3 py-2 hover:bg-gray-700 disabled:opacity-40 transition-colors mt-1"
       >
         {generating

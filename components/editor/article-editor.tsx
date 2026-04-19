@@ -28,6 +28,8 @@ interface Props {
   initialSlug: string | null;
   initialPublishedUrl: string | null;
   initialStatus: string;
+  initialRevampUrl: string | null;
+  initialIsRevamp: boolean;
 }
 
 export function ArticleEditor({
@@ -39,12 +41,16 @@ export function ArticleEditor({
   initialSlug,
   initialPublishedUrl,
   initialStatus,
+  initialRevampUrl,
+  initialIsRevamp,
 }: Props) {
   const [title, setTitle] = useState(initialTitle);
   const [metaDescription, setMetaDescription] = useState(initialMeta ?? "");
   const [slug, setSlug] = useState(initialSlug ?? "");
   const [publishedUrl, setPublishedUrl] = useState(initialPublishedUrl ?? "");
   const [status, setStatus] = useState(initialStatus);
+  const [isRevamp, setIsRevamp] = useState(initialIsRevamp);
+  const [revampUrl, setRevampUrl] = useState(initialRevampUrl ?? "");
   const [saveState, setSaveState] = useState<SaveState>("idle");
   const [panelOpen, setPanelOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<SidebarTab>("keywords");
@@ -117,6 +123,16 @@ export function ArticleEditor({
     const val = e.target.value;
     setPublishedUrl(val);
     scheduleSave({ publishedUrl: val || null });
+  }
+
+  function handleRevampToggle(e: React.ChangeEvent<HTMLInputElement>) {
+    const val = e.target.checked;
+    setIsRevamp(val);
+    scheduleSave({ isRevamp: val });
+  }
+
+  function handleRevampUrlBlur() {
+    scheduleSave({ revampUrl: revampUrl || null });
   }
 
   async function handleMarkReady() {
@@ -192,6 +208,24 @@ export function ArticleEditor({
               placeholder="Untitled"
               className="w-full text-4xl font-bold text-gray-900 placeholder-gray-300 border-none outline-none bg-transparent leading-tight"
             />
+
+            {/* Revamp toggle */}
+            <div className="flex items-center gap-3">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" checked={isRevamp} onChange={handleRevampToggle} className="rounded" />
+                <span className="text-[11px] text-gray-500">Revamping an existing page</span>
+              </label>
+              {isRevamp && (
+                <input
+                  type="url"
+                  value={revampUrl}
+                  onChange={(e) => setRevampUrl(e.target.value)}
+                  onBlur={handleRevampUrlBlur}
+                  placeholder="https://10pearls.com/existing-page"
+                  className="flex-1 text-xs border border-gray-200 rounded-md px-2.5 py-1.5 outline-none focus:border-gray-400 placeholder-gray-300"
+                />
+              )}
+            </div>
 
             {/* Slug + Published URL row */}
             <div className="flex gap-3">
@@ -289,6 +323,8 @@ export function ArticleEditor({
                     <BriefPanel
                       articleId={id}
                       keyword={keyword}
+                      revampUrl={isRevamp ? revampUrl : null}
+                      isRevamp={isRevamp}
                       onCompetitorAvgWords={setCompetitorAvgWords}
                       onInjectContent={(blocks) => {
                         replaceContentRef.current?.(blocks);

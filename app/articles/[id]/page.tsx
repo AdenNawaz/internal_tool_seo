@@ -20,6 +20,8 @@ export default async function ArticlePage({ params }: Props) {
       initialSlug={article.slug}
       initialPublishedUrl={article.publishedUrl}
       initialStatus={article.status}
+      initialRevampUrl={article.revampUrl ?? null}
+      initialIsRevamp={article.isRevamp}
     />
   );
 }

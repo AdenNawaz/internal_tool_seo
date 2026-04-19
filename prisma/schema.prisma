@@ -20,6 +20,8 @@ model Article {
   authorEmail     String?
   clusterId       String?
   clusterName     String?
+  revampUrl       String?
+  isRevamp        Boolean  @default(false)
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 }
@@ -33,6 +35,10 @@ model ArticleBrief {
   outline            Json?
   editableOutline    Json?
   paaQuestions       Json?
+  gptQueries         Json?
+  geoQuestions       Json?
+  aeoQuestions       Json?
+  revampAnalysis     Json?
   status             String   @default("fetching")
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt

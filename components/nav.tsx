@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { UserNav } from "./user-nav";
 
 const links = [
+  { href: "/chat", label: "New research" },
   { href: "/articles", label: "Articles" },
   { href: "/research", label: "Research" },
   { href: "/dashboard", label: "Dashboard" },
@@ -14,8 +15,8 @@ const links = [
 export function Nav() {
   const pathname = usePathname();
 
-  // Hide nav on editor pages and login
-  if (pathname.startsWith("/articles/") || pathname === "/login") return null;
+  // Hide nav on editor, chat (full-screen), and login
+  if (pathname.startsWith("/articles/") || pathname === "/login" || pathname === "/chat") return null;
 
   return (
     <nav className="border-b border-gray-100 bg-white px-8 py-3 flex items-center justify-between">
