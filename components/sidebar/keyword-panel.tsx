@@ -458,15 +458,24 @@ function WritingQuality({ content, targetKeyword }: { content: unknown; targetKe
 
 /* ─── Main component ─────────────────────────────────────────────────── */
 
+interface SecondaryKeyword {
+  keyword: string;
+  volume?: number;
+  kd?: number;
+  intent?: string;
+}
+
 interface Props {
   articleId: string;
   initialKeyword: string | null;
   onKeywordChange: (keyword: string) => void;
   analysisContent: unknown;
   onCompetitorAvgWords?: (words: number | null) => void;
+  autoLookup?: boolean;
+  initialSecondaryKeywords?: SecondaryKeyword[] | null;
 }
 
-export function KeywordPanel({ articleId, initialKeyword, onKeywordChange, analysisContent, onCompetitorAvgWords }: Props) {
+export function KeywordPanel({ articleId, initialKeyword, onKeywordChange, analysisContent, onCompetitorAvgWords, autoLookup, initialSecondaryKeywords }: Props) {
   const [keyword, setKeyword] = useState(initialKeyword ?? "");
   const [lookupResult, setLookupResult] = useState<LookupResult | null>(null);
   const [lookupLoading, setLookupLoading] = useState(false);
@@ -475,6 +484,15 @@ export function KeywordPanel({ articleId, initialKeyword, onKeywordChange, analy
   const [canniLoading, setCanniLoading] = useState(false);
   const [canniError, setCanniError] = useState(false);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const autoLookupDoneRef = useRef(false);
+
+  // Auto-trigger lookup on mount when coming from chat flow
+  useEffect(() => {
+    if (!autoLookup || !keyword.trim() || autoLookupDoneRef.current) return;
+    autoLookupDoneRef.current = true;
+    handleLookup();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const scheduleKeywordSave = useCallback(
     (value: string) => {
@@ -562,6 +580,31 @@ export function KeywordPanel({ articleId, initialKeyword, onKeywordChange, analy
       {lookupLoading && <KeywordSkeleton />}
       {lookupError && <p className="text-xs text-red-500">{lookupError}</p>}
 
+      {/* Secondary keywords from chat research (no Ahrefs lookup needed) */}
+      {initialSecondaryKeywords && initialSecondaryKeywords.length > 0 && !lookupResult && !lookupLoading && (
+        <div className="space-y-2">
+          <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide">Secondary keywords from research</p>
+          <div className="rounded-md border border-gray-100 divide-y divide-gray-50">
+            {initialSecondaryKeywords.map((kw, i) => (
+              <div key={i} className="flex items-center justify-between gap-2 px-2.5 py-1.5">
+                <span className="text-xs text-gray-700 truncate">{kw.keyword}</span>
+                <div className="flex items-center gap-2 shrink-0">
+                  {kw.volume != null && kw.volume > 0 && (
+                    <span className="text-[10px] text-gray-400">{fmt(kw.volume)}</span>
+                  )}
+                  {kw.kd != null && kw.kd > 0 && (
+                    <DifficultyBadge value={kw.kd} />
+                  )}
+                  {kw.intent && (
+                    <span className="text-[10px] bg-gray-100 text-gray-500 rounded px-1 py-0.5">{kw.intent}</span>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {lookupResult && !lookupLoading && (
         <div className="space-y-5">
           {ov && (
@@ -609,6 +652,28 @@ export function KeywordPanel({ articleId, initialKeyword, onKeywordChange, analy
                     <div className="flex items-center gap-2 shrink-0">
                       <span className="text-[10px] text-gray-400">{fmt(term.volume)}</span>
                       <DifficultyBadge value={term.difficulty} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Secondary keywords from chat (shown alongside Ahrefs data) */}
+          {initialSecondaryKeywords && initialSecondaryKeywords.length > 0 && (
+            <div className="space-y-2">
+              <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide">Secondary keywords</p>
+              <div className="rounded-md border border-gray-100 divide-y divide-gray-50">
+                {initialSecondaryKeywords.map((kw, i) => (
+                  <div key={i} className="flex items-center justify-between gap-2 px-2.5 py-1.5">
+                    <span className="text-xs text-gray-700 truncate">{kw.keyword}</span>
+                    <div className="flex items-center gap-2 shrink-0">
+                      {kw.volume != null && kw.volume > 0 && (
+                        <span className="text-[10px] text-gray-400">{fmt(kw.volume)}</span>
+                      )}
+                      {kw.kd != null && kw.kd > 0 && (
+                        <DifficultyBadge value={kw.kd} />
+                      )}
                     </div>
                   </div>
                 ))}

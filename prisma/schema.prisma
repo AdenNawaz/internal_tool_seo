@@ -20,9 +20,12 @@ model Article {
   authorEmail     String?
   clusterId       String?
   clusterName     String?
-  revampUrl       String?
-  isRevamp        Boolean  @default(false)
-  createdAt       DateTime @default(now())
+  revampUrl          String?
+  isRevamp           Boolean  @default(false)
+  secondaryKeywords  Json?
+  chatOutline        Json?
+  chatResearchState  Json?
+  createdAt          DateTime @default(now())
   updatedAt       DateTime @updatedAt
 }
 

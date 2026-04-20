@@ -42,6 +42,20 @@ interface BriefData {
   status: string;
 }
 
+interface ChatCompetitor {
+  url: string;
+  title: string;
+  wordCount?: number;
+  keyPoints?: string[];
+}
+
+interface ChatOutlineItem {
+  id: string;
+  level: 2 | 3;
+  text: string;
+  type: string;
+}
+
 interface Props {
   articleId: string;
   keyword: string;
@@ -49,6 +63,10 @@ interface Props {
   isRevamp?: boolean;
   onCompetitorAvgWords: (words: number | null) => void;
   onInjectContent?: (blocks: unknown[]) => void;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  initialChatOutline?: any;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  initialChatResearchState?: any;
 }
 
 function deriveItems(aiOutline: AiOutline): OutlineItem[] {
@@ -69,7 +87,7 @@ const SOURCE_CLS: Record<string, string> = {
   ai: "bg-teal-100 text-teal-700",
 };
 
-export function BriefPanel({ articleId, keyword, revampUrl, isRevamp, onCompetitorAvgWords, onInjectContent }: Props) {
+export function BriefPanel({ articleId, keyword, revampUrl, isRevamp, onCompetitorAvgWords, onInjectContent, initialChatOutline, initialChatResearchState }: Props) {
   const [brief, setBrief] = useState<BriefData | null>(null);
   const [fetching, setFetching] = useState(false);
   const [analyzing, setAnalyzing] = useState(false);
@@ -93,6 +111,49 @@ export function BriefPanel({ articleId, keyword, revampUrl, isRevamp, onCompetit
   const prevRevampUrl = useRef<string | null | undefined>(null);
 
   useEffect(() => {
+    // If chat research state is available, pre-populate without needing a DB brief
+    if (initialChatResearchState && initialChatOutline) {
+      const chatState = initialChatResearchState as {
+        competitorData?: ChatCompetitor[];
+        primaryKeyword?: string;
+      };
+      const chatOutline = initialChatOutline as ChatOutlineItem[];
+      const chatCompetitors = chatState.competitorData ?? [];
+
+      // Convert chat outline to OutlineItem format
+      const outlineItems: OutlineItem[] = chatOutline.map((item) => ({
+        id: item.id || crypto.randomUUID(),
+        level: item.level as 2 | 3,
+        text: item.text,
+        locked: false,
+        seoType: (["seo", "geo", "aeo", "gpt"].includes(item.type) ? item.type : "seo") as OutlineItem["seoType"],
+      }));
+      setOutlineItems(outlineItems);
+
+      // Build synthetic competitor data
+      const avgWords = chatCompetitors.length > 0
+        ? Math.round(chatCompetitors.reduce((sum, c) => sum + (c.wordCount ?? 1500), 0) / chatCompetitors.length)
+        : 1500;
+      onCompetitorAvgWords(avgWords);
+
+      // Fetch from DB to check if a real brief exists; merge if so
+      fetch(`/api/brief/fetch?articleId=${articleId}`)
+        .then((r) => r.json())
+        .then((data: BriefData | null) => {
+          if (data) {
+            setBrief(data);
+            if (data.status === "fetching") startPolling(data.id);
+            // Only override outline items if DB has a real editable outline
+            if (data.editableOutline) setOutlineItems(data.editableOutline);
+          }
+        })
+        .catch(() => {});
+      return () => {
+        if (pollRef.current) clearInterval(pollRef.current);
+        if (outlineSaveTimer.current) clearTimeout(outlineSaveTimer.current);
+      };
+    }
+
     fetch(`/api/brief/fetch?articleId=${articleId}`)
       .then((r) => r.json())
       .then((data: BriefData | null) => {
@@ -349,6 +410,75 @@ export function BriefPanel({ articleId, keyword, revampUrl, isRevamp, onCompetit
   // --- Render ---
 
   if (!brief) {
+    // If we have chat research state, show pre-loaded view with competitor data
+    if (initialChatResearchState && outlineItems) {
+      const chatState = initialChatResearchState as {
+        competitorData?: ChatCompetitor[];
+        primaryKeyword?: string;
+        topic?: string;
+      };
+      const competitors = chatState.competitorData ?? [];
+
+      return (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Article Brief</p>
+            <span className="text-[10px] bg-green-100 text-green-700 rounded-full px-2 py-0.5 font-medium">From chat</span>
+          </div>
+
+          {/* Competitor overview from chat */}
+          {competitors.length > 0 && (
+            <div className="space-y-2">
+              <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide">Competitor analysis</p>
+              {competitors.slice(0, 4).map((c, i) => (
+                <div key={i} className="rounded-md border border-gray-100 p-2.5 space-y-1.5">
+                  <a href={c.url} target="_blank" rel="noopener noreferrer"
+                    className="text-[11px] font-medium text-blue-600 hover:underline truncate block">
+                    {c.title || c.url}
+                  </a>
+                  {c.wordCount && (
+                    <span className="text-[10px] text-gray-400">{c.wordCount.toLocaleString()} words</span>
+                  )}
+                  {c.keyPoints && c.keyPoints.length > 0 && (
+                    <ul className="space-y-0.5">
+                      {c.keyPoints.slice(0, 3).map((pt, j) => (
+                        <li key={j} className="text-[10px] text-gray-500 pl-2 border-l border-gray-100">
+                          {pt}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Outline editor pre-loaded from chat */}
+          {outlineItems && outlineItems.length > 0 && (
+            <div className="space-y-2">
+              <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide">Outline from chat</p>
+              <OutlineEditor
+                items={outlineItems}
+                onItemsChange={handleOutlineChange}
+                onGenerateContent={handleGenerateContent}
+                generating={generating}
+                generationStatus={generationStatus}
+                generated={generated}
+              />
+            </div>
+          )}
+
+          {/* Allow generating a full brief to get more data */}
+          {keyword.trim() && (
+            <button onClick={handleFetchBrief} disabled={fetching} className="w-full text-xs text-gray-500 border border-gray-200 rounded-md px-3 py-2 hover:bg-gray-50 transition-colors">
+              {fetching ? "Fetching…" : "Load full brief from Ahrefs"}
+            </button>
+          )}
+          {error && <p className="text-xs text-red-500">{error}</p>}
+        </div>
+      );
+    }
+
     return (
       <div className="space-y-4">
         <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Article Brief</p>

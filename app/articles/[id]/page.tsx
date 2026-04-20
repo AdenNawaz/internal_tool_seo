@@ -20,8 +20,11 @@ export default async function ArticlePage({ params }: Props) {
       initialSlug={article.slug}
       initialPublishedUrl={article.publishedUrl}
       initialStatus={article.status}
-      initialRevampUrl={article.revampUrl ?? null}
-      initialIsRevamp={article.isRevamp}
+      initialRevampUrl={(article as Record<string, unknown>).revampUrl as string ?? null}
+      initialIsRevamp={(article as Record<string, unknown>).isRevamp as boolean ?? false}
+      initialSecondaryKeywords={(article as Record<string, unknown>).secondaryKeywords ?? null}
+      initialChatOutline={(article as Record<string, unknown>).chatOutline ?? null}
+      initialChatResearchState={(article as Record<string, unknown>).chatResearchState ?? null}
     />
   );
 }

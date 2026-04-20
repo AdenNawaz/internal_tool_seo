@@ -30,6 +30,12 @@ interface Props {
   initialStatus: string;
   initialRevampUrl: string | null;
   initialIsRevamp: boolean;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  initialSecondaryKeywords?: any;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  initialChatOutline?: any;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  initialChatResearchState?: any;
 }
 
 export function ArticleEditor({
@@ -43,6 +49,9 @@ export function ArticleEditor({
   initialStatus,
   initialRevampUrl,
   initialIsRevamp,
+  initialSecondaryKeywords,
+  initialChatOutline,
+  initialChatResearchState,
 }: Props) {
   const [title, setTitle] = useState(initialTitle);
   const [metaDescription, setMetaDescription] = useState(initialMeta ?? "");
@@ -52,8 +61,10 @@ export function ArticleEditor({
   const [isRevamp, setIsRevamp] = useState(initialIsRevamp);
   const [revampUrl, setRevampUrl] = useState(initialRevampUrl ?? "");
   const [saveState, setSaveState] = useState<SaveState>("idle");
-  const [panelOpen, setPanelOpen] = useState(false);
+  const hasChatState = !!initialChatResearchState;
+  const [panelOpen, setPanelOpen] = useState(hasChatState);
   const [activeTab, setActiveTab] = useState<SidebarTab>("keywords");
+  const [chatBannerDismissed, setChatBannerDismissed] = useState(false);
   const [analysisContent, setAnalysisContent] = useState<unknown>(initialContent);
   const [keyword, setKeyword] = useState(initialKeyword ?? "");
   const [competitorAvgWords, setCompetitorAvgWords] = useState<number | null>(null);
@@ -200,6 +211,20 @@ export function ArticleEditor({
       <div className="flex flex-1 overflow-hidden relative">
         {/* Editor area */}
         <div className="flex-1 overflow-y-auto">
+          {/* Research-from-chat banner */}
+          {hasChatState && !chatBannerDismissed && (
+            <div className="flex items-center justify-between bg-green-50 border-b border-green-200 px-8 py-2.5">
+              <p className="text-xs text-green-800">
+                <span className="font-semibold">Research imported from chat</span> — keyword, outline, and brief are pre-loaded.
+              </p>
+              <button
+                onClick={() => setChatBannerDismissed(true)}
+                className="text-green-500 hover:text-green-700 text-xs ml-4"
+              >
+                ✕ Dismiss
+              </button>
+            </div>
+          )}
           <div className="max-w-[720px] mx-auto px-8 py-12 space-y-6">
             <input
               type="text"
@@ -316,6 +341,8 @@ export function ArticleEditor({
                     onKeywordChange={handleKeywordChange}
                     analysisContent={analysisContent}
                     onCompetitorAvgWords={setCompetitorAvgWords}
+                    autoLookup={hasChatState && !!initialKeyword}
+                    initialSecondaryKeywords={initialSecondaryKeywords}
                   />
                 )}
                 {activeTab === "brief" && (
@@ -330,6 +357,8 @@ export function ArticleEditor({
                         replaceContentRef.current?.(blocks);
                         handleContentChange(blocks);
                       }}
+                      initialChatOutline={initialChatOutline}
+                      initialChatResearchState={initialChatResearchState}
                     />
                   </div>
                 )}

@@ -11,6 +11,9 @@ const patchSchema = z.object({
   checklistScore: z.number().int().nullable().optional(),
   publishedUrl: z.string().nullable().optional(),
   status: z.string().optional(),
+  secondaryKeywords: z.unknown().optional(),
+  chatOutline: z.unknown().optional(),
+  chatResearchState: z.unknown().optional(),
 });
 
 export async function GET(
@@ -46,6 +49,9 @@ export async function PATCH(
   if (parsed.data.checklistScore !== undefined) data.checklistScore = parsed.data.checklistScore;
   if (parsed.data.publishedUrl !== undefined) data.publishedUrl = parsed.data.publishedUrl;
   if (parsed.data.status !== undefined) data.status = parsed.data.status;
+  if (parsed.data.secondaryKeywords !== undefined) data.secondaryKeywords = parsed.data.secondaryKeywords;
+  if (parsed.data.chatOutline !== undefined) data.chatOutline = parsed.data.chatOutline;
+  if (parsed.data.chatResearchState !== undefined) data.chatResearchState = parsed.data.chatResearchState;
 
   const article = await db.article.update({
     where: { id: params.id },

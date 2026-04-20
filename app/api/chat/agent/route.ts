@@ -189,7 +189,7 @@ export async function POST(req: NextRequest) {
 
             sendText(controller, enc, `\n\n---\n\nSaving your article…`);
 
-            // Save to DB
+            // Save to DB with full research context
             const blocks = markdownToBlocks(fullContent);
             const article = await db.article.create({
               data: {
@@ -197,6 +197,9 @@ export async function POST(req: NextRequest) {
                 targetKeyword: state.primaryKeyword,
                 content: blocks as never,
                 status: "draft",
+                secondaryKeywords: state.secondaryKeywords as never,
+                chatOutline: state.outline as never,
+                chatResearchState: state as never,
               },
             });
 
