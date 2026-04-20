@@ -10,8 +10,6 @@ import {
 } from "@/components/ui/table";
 import { NewArticleButton } from "@/components/new-article-button";
 import { ArticlesFilter } from "@/components/articles-filter";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
@@ -31,11 +29,8 @@ interface Props {
 
 export default async function ArticlesPage({ searchParams }: Props) {
   const mine = searchParams.mine === "true";
-  const session = await getServerSession(authOptions);
-  const userEmail = session?.user?.email ?? null;
-
   const articles = await db.article.findMany({
-    where: mine && userEmail ? { authorEmail: userEmail } : undefined,
+    where: undefined,
     orderBy: { updatedAt: "desc" },
   });
 
