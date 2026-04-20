@@ -34,6 +34,34 @@ async function llm(prompt: string, maxTokens = 1500): Promise<string> {
   throw lastError;
 }
 
+async function fetchInsights(): Promise<{ wordCountHint: string; clusterHint: string }> {
+  try {
+    const base = process.env.NEXTAUTH_URL ?? process.env.VERCEL_URL
+      ? `https://${process.env.VERCEL_URL}`
+      : "http://localhost:3000";
+    const res = await fetch(`${base}/api/insights/what-works`, { cache: "no-store" });
+    if (!res.ok) return { wordCountHint: "", clusterHint: "" };
+    const data = await res.json() as {
+      insufficient_data?: boolean;
+      wordCountInsight?: { optimalMin: number; optimalMax: number; basis: string };
+      bestPerformingClusters?: Array<{ clusterName: string; avgPosition: number }>;
+    };
+    if (data.insufficient_data) return { wordCountHint: "", clusterHint: "" };
+
+    const wordCountHint = data.wordCountInsight
+      ? `Optimal word count based on your top-ranking articles: ${data.wordCountInsight.optimalMin}–${data.wordCountInsight.optimalMax} words. ${data.wordCountInsight.basis}.`
+      : "";
+
+    const clusterHint = data.bestPerformingClusters?.length
+      ? `Best performing topic clusters on this site: ${data.bestPerformingClusters.slice(0, 3).map(c => `${c.clusterName} (avg #${c.avgPosition})`).join(", ")}.`
+      : "";
+
+    return { wordCountHint, clusterHint };
+  } catch {
+    return { wordCountHint: "", clusterHint: "" };
+  }
+}
+
 export async function generateOutline(
   topic: string,
   primaryKeyword: string,
@@ -47,6 +75,10 @@ export async function generateOutline(
     .map(c => `${c.url}:\n${(c.keyPoints ?? []).slice(0, 4).map(p => `  • ${p}`).join("\n")}`)
     .join("\n\n");
 
+  // Fetch performance insights to improve outline quality
+  const { wordCountHint, clusterHint } = await fetchInsights();
+  const insightsSection = [wordCountHint, clusterHint].filter(Boolean).join(" ");
+
   const prompt = `Create a detailed content outline for a ${contentType} about: "${topic}"
 Primary keyword: ${primaryKeyword}
 
@@ -55,7 +87,7 @@ ${kwList}
 
 Competitor key points to consider:
 ${compSummary}
-
+${insightsSection ? `\nPERFORMANCE INSIGHTS FROM PUBLISHED ARTICLES:\n${insightsSection}\nAdjust the outline depth and section count to align with what has historically ranked well.\n` : ""}
 Label each heading with its SEO type:
 - "seo" = traditional search query heading
 - "geo" = geographic/local/entity-based (for Google Search generative experience)

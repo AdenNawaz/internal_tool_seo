@@ -3,6 +3,7 @@ import Link from "next/link";
 import { DashboardClient } from "@/components/dashboard/dashboard-client";
 import { SovSection } from "@/components/dashboard/sov-section";
 import { PrioritiesSection } from "@/components/dashboard/priorities-section";
+import { InsightsSection } from "@/components/dashboard/insights-section";
 
 export const dynamic = "force-dynamic";
 
@@ -57,6 +58,8 @@ export default async function DashboardPage() {
       </div>
 
       <PrioritiesSection />
+
+      <InsightsSection />
 
       <div className="mb-10">
         <SovSection />
