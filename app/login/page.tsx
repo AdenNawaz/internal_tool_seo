@@ -40,8 +40,8 @@ function LoginForm() {
           Sign in with Google
         </button>
 
-        {/* Dev skip button — only rendered in development */}
-        {process.env.NODE_ENV === "development" && (
+        {/* Dev skip button — shown when NEXT_PUBLIC_DEV_BYPASS_ENABLED=true */}
+        {process.env.NEXT_PUBLIC_DEV_BYPASS_ENABLED === "true" && (
           <button
             onClick={async () => {
               const res = await signIn("dev-skip", {
