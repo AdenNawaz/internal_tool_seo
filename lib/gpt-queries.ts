@@ -48,7 +48,7 @@ async function fetchRedditQuestions(topic: string): Promise<string[]> {
       const combined = `${result.title ?? ""} ${result.snippet ?? ""}`;
       questions.push(...extractQuestions(combined));
     }
-    return [...new Set(questions)].slice(0, 8);
+    return Array.from(new Set(questions)).slice(0, 8);
   } catch {
     return [];
   }
