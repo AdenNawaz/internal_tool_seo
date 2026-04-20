@@ -13,8 +13,7 @@ const STOP_WORDS = new Set([
 ]);
 
 export function extractTopics(plainText: string): string[] {
-  // Dynamic import of compromise — only called in browser context
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
   const nlp: (text: string) => NlpDoc = require("compromise");
   const doc = nlp(plainText);
 

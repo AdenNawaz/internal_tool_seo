@@ -149,7 +149,6 @@ Rules:
 - Never use filler phrases like "It is important to note" or "In today's digital landscape"`;
 
   const wordCounts = allocateWordCounts(outline);
-  const h2Items = outline.filter(i => i.level === 2);
 
   let isFirstSection = true;
 

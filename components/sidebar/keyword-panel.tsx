@@ -475,7 +475,7 @@ interface Props {
   initialSecondaryKeywords?: SecondaryKeyword[] | null;
 }
 
-export function KeywordPanel({ articleId, initialKeyword, onKeywordChange, analysisContent, onCompetitorAvgWords, autoLookup, initialSecondaryKeywords }: Props) {
+export function KeywordPanel({ articleId, initialKeyword, onKeywordChange, analysisContent, autoLookup, initialSecondaryKeywords }: Props) {
   const [keyword, setKeyword] = useState(initialKeyword ?? "");
   const [lookupResult, setLookupResult] = useState<LookupResult | null>(null);
   const [lookupLoading, setLookupLoading] = useState(false);

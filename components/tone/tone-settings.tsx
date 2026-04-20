@@ -100,7 +100,7 @@ function ProfileSection({ type, label, initialProfile }: { type: "blog" | "landi
             <div>
               <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-1">Example sentences</p>
               {(profile.examples as string[]).map((ex, i) => (
-                <p key={i} className="text-[11px] text-gray-500 italic border-l-2 border-gray-100 pl-2 mb-1">"{ex}"</p>
+                <p key={i} className="text-[11px] text-gray-500 italic border-l-2 border-gray-100 pl-2 mb-1">&ldquo;{ex}&rdquo;</p>
               ))}
             </div>
           )}
