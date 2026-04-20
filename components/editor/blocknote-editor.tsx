@@ -42,7 +42,8 @@ export default function BlockNoteEditorComponent({ initialContent, onChange, onM
   const onCursorHeadingRef = useRef(onCursorHeading);
   onCursorHeadingRef.current = onCursorHeading;
 
-  const editor = useMemo(() => { // eslint-disable-line react-hooks/exhaustive-deps
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const editor = useMemo(() => {
     let blocks: PartialBlock[] | undefined;
     if (Array.isArray(initialContent) && initialContent.length > 0) {
       blocks = initialContent as PartialBlock[];

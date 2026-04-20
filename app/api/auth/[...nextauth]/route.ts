@@ -1,47 +1,5 @@
-import NextAuth, { type NextAuthOptions } from "next-auth";
-import GoogleProvider from "next-auth/providers/google";
-import CredentialsProvider from "next-auth/providers/credentials";
-
-export const authOptions: NextAuthOptions = {
-  providers: [
-    ...(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET
-      ? [
-          GoogleProvider({
-            clientId: process.env.GOOGLE_CLIENT_ID,
-            clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-          }),
-        ]
-      : []),
-    CredentialsProvider({
-      id: "dev-skip",
-      name: "Skip",
-      credentials: {},
-      async authorize() {
-        if (!process.env.DEV_BYPASS_ENABLED) return null;
-        return { id: "dev", name: "Dev User", email: "dev@local" };
-      },
-    }),
-  ],
-  callbacks: {
-    async signIn({ profile, account }) {
-      if (account?.provider === "dev-skip") {
-        return !!process.env.DEV_BYPASS_ENABLED;
-      }
-      const email = profile?.email ?? "";
-      const allowed = process.env.ALLOWED_EMAIL_DOMAIN ?? "";
-      // Deny everyone if ALLOWED_EMAIL_DOMAIN is not configured — secure default
-      if (!allowed) return false;
-      return email.endsWith("@" + allowed);
-    },
-    async session({ session }) {
-      return session;
-    },
-  },
-  pages: {
-    signIn: "/login",
-    error: "/login",
-  },
-};
+import NextAuth from "next-auth";
+import { authOptions } from "@/lib/auth";
 
 const handler = NextAuth(authOptions);
 export { handler as GET, handler as POST };
