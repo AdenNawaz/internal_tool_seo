@@ -8,7 +8,9 @@ import { KeywordPanel } from "@/components/sidebar/keyword-panel";
 import { ChecklistPanel } from "@/components/sidebar/checklist-panel";
 import { BriefPanel } from "@/components/sidebar/brief-panel";
 import { GapPanel } from "@/components/sidebar/gap-panel";
+import { SectionActionBar } from "./section-action-bar";
 import type { ChecklistInput } from "@/lib/checklist";
+import type { CursorHeading, EditorAPI } from "./blocknote-editor";
 
 const BlockNoteEditorComponent = dynamic(
   () => import("./blocknote-editor"),
@@ -73,7 +75,8 @@ export function ArticleEditor({
   const analysisTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pendingRef = useRef<Record<string, unknown>>({});
   const contentRef = useRef<unknown>(initialContent);
-  const replaceContentRef = useRef<((blocks: unknown[]) => void) | null>(null);
+  const editorApiRef = useRef<EditorAPI | null>(null);
+  const [cursorHeading, setCursorHeading] = useState<CursorHeading | null>(null);
 
   const scheduleSave = useCallback(
     (patch: Record<string, unknown>) => {
@@ -299,10 +302,28 @@ export function ArticleEditor({
               />
             </div>
 
+            {/* Section action bar — shows when cursor is inside a heading */}
+            {cursorHeading && (
+              <div className="mb-2 flex items-center gap-2">
+                <span className="text-[10px] text-gray-400 font-mono shrink-0">H{cursorHeading.level}</span>
+                <SectionActionBar
+                  articleId={id}
+                  targetKeyword={keyword}
+                  heading={cursorHeading}
+                  editorApi={editorApiRef.current}
+                  chatOutline={Array.isArray(initialChatOutline) ? initialChatOutline : undefined}
+                  onContentChanged={() => {
+                    scheduleSave({ content: contentRef.current });
+                  }}
+                />
+              </div>
+            )}
+
             <BlockNoteEditorComponent
               initialContent={initialContent}
               onChange={handleContentChange}
-              onMount={(fn) => { replaceContentRef.current = fn; }}
+              onMount={(api) => { editorApiRef.current = api; }}
+              onCursorHeading={setCursorHeading}
             />
           </div>
         </div>
@@ -354,7 +375,7 @@ export function ArticleEditor({
                       isRevamp={isRevamp}
                       onCompetitorAvgWords={setCompetitorAvgWords}
                       onInjectContent={(blocks) => {
-                        replaceContentRef.current?.(blocks);
+                        editorApiRef.current?.replaceContent(blocks);
                         handleContentChange(blocks);
                       }}
                       initialChatOutline={initialChatOutline}
