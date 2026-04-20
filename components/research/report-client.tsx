@@ -63,18 +63,14 @@ export function ReportClient({
     }
   }
 
-  async function handleStartArticle(cluster: KeywordCluster) {
-    try {
-      const res = await fetch("/api/articles", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ targetKeyword: cluster.primaryKeyword }),
-      });
-      const data = await res.json();
-      router.push(`/articles/${data.id}`);
-    } catch {
-      // ignore
-    }
+  function handleStartArticle(cluster: KeywordCluster) {
+    const params = new URLSearchParams({
+      reportId,
+      primaryKeyword: cluster.primaryKeyword,
+      clusterName: cluster.clusterName,
+      keywords: cluster.keywords.join(","),
+    });
+    router.push(`/chat?${params.toString()}`);
   }
 
   const intentColor = (intent: KeywordCluster["searchIntent"]) => {

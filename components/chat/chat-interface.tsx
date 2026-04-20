@@ -192,14 +192,40 @@ function ArticleSavedCard({ articleId, onOpen }: { articleId: string; onOpen: ()
   );
 }
 
-export function ChatInterface() {
+interface ChatInterfaceProps {
+  preloadReportId?: string;
+  preloadPrimaryKeyword?: string;
+  preloadClusterName?: string;
+  preloadKeywords?: string;
+}
+
+export function ChatInterface({ preloadReportId, preloadPrimaryKeyword, preloadClusterName, preloadKeywords }: ChatInterfaceProps = {}) {
   const router = useRouter();
+  const isPreloaded = !!(preloadReportId && preloadPrimaryKeyword);
+
   const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [state, setState] = useState<ResearchState>(defaultState);
+  const [state, setState] = useState<ResearchState>(() => {
+    if (isPreloaded) {
+      const keywords: KeywordData[] = (preloadKeywords ?? "")
+        .split(",")
+        .filter(Boolean)
+        .map(k => ({ keyword: k.trim(), volume: 0, kd: 0, intent: "informational" }));
+      return {
+        ...defaultState(),
+        topic: preloadPrimaryKeyword!,
+        primaryKeyword: preloadPrimaryKeyword!,
+        secondaryKeywords: keywords,
+        keywordsApproved: true,
+        contentType: "blog",
+        currentStep: "outline",
+      };
+    }
+    return defaultState();
+  });
   const [input, setInput] = useState("");
   const [thinking, setThinking] = useState(false);
   const [thinkingLabel, setThinkingLabel] = useState("Thinking…");
-  const [setupPhase, setSetupPhase] = useState<"topic" | "type" | "country" | null>("topic");
+  const [setupPhase, setSetupPhase] = useState<"topic" | "type" | "country" | null>(isPreloaded ? null : "topic");
   const [setupInput, setSetupInput] = useState("");
   const bottomRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -207,8 +233,35 @@ export function ChatInterface() {
   const stateRef = useRef(state);
   useEffect(() => { stateRef.current = state; }, [state]);
 
-  // Load from localStorage
+  // Auto-trigger outline generation when preloaded from a cluster
+  const preloadTriggeredRef = useRef(false);
   useEffect(() => {
+    if (!isPreloaded || preloadTriggeredRef.current) return;
+    preloadTriggeredRef.current = true;
+    const banner = `Continuing from research: **${preloadClusterName ?? preloadPrimaryKeyword}**\n\nKeywords and competitor data loaded — jumping straight to outline generation.`;
+    setMessages([{ role: "assistant", content: banner }]);
+    const keywords: KeywordData[] = (preloadKeywords ?? "")
+      .split(",")
+      .filter(Boolean)
+      .map(k => ({ keyword: k.trim(), volume: 0, kd: 0, intent: "informational" }));
+    const initialState: ResearchState = {
+      ...defaultState(),
+      topic: preloadPrimaryKeyword!,
+      primaryKeyword: preloadPrimaryKeyword!,
+      secondaryKeywords: keywords,
+      keywordsApproved: true,
+      contentType: "blog",
+      currentStep: "outline",
+    };
+    setState(initialState);
+    // Kick off outline generation immediately
+    setTimeout(() => runAgentStep(initialState, undefined), 100);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Load from localStorage (skip if preloaded from cluster)
+  useEffect(() => {
+    if (isPreloaded) return;
     try {
       const stored = localStorage.getItem(STORAGE_KEY);
       if (stored) {
@@ -433,12 +486,22 @@ export function ChatInterface() {
             </Link>
           ))}
         </div>
-        <button
-          onClick={clearHistory}
-          className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-gray-700 transition-colors"
-        >
-          <RotateCcw size={12} /> New session
-        </button>
+        <div className="flex items-center gap-3">
+          {isPreloaded && preloadReportId && (
+            <Link
+              href={`/research/${preloadReportId}`}
+              className="text-xs text-gray-400 hover:text-gray-700 transition-colors"
+            >
+              ← Back to research report
+            </Link>
+          )}
+          <button
+            onClick={clearHistory}
+            className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-gray-700 transition-colors"
+          >
+            <RotateCcw size={12} /> New session
+          </button>
+        </div>
       </div>
 
       {/* Step progress bar */}

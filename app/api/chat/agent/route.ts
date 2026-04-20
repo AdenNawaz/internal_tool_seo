@@ -58,8 +58,53 @@ export async function POST(req: NextRequest) {
       try {
         const step = state.currentStep;
 
+        // Step: outline — generate outline directly (used when pre-loaded from cluster)
+        if (step === "outline" && !userMessage) {
+          send(controller, enc, { type: "step", step: "competitors", label: "Analyzing competitors…" });
+          sendText(controller, enc, `Analyzing competitors for **"${state.primaryKeyword}"**…\n\n`);
+
+          const competitors = await runCompetitorAgent(state.primaryKeyword, state.country);
+          send(controller, enc, { type: "competitors", competitors });
+
+          for (const c of competitors.slice(0, 3)) {
+            sendText(controller, enc, `**${c.title || c.url}**\n`);
+            if (c.keyPoints?.length) {
+              sendText(controller, enc, (c.keyPoints.slice(0, 3).map(p => `- ${p}`).join("\n")) + "\n\n");
+            }
+          }
+
+          send(controller, enc, { type: "step", step: "outline", label: "Building outline…" });
+          sendText(controller, enc, `Generating outline…\n\n`);
+
+          const outline = await generateOutline(
+            state.topic,
+            state.primaryKeyword,
+            state.secondaryKeywords,
+            competitors,
+            state.contentType
+          );
+          send(controller, enc, { type: "outline", outline });
+
+          for (const item of outline) {
+            const prefix = item.level === 2 ? "## " : "### ";
+            const badge = item.type !== "general" ? ` \`${item.type.toUpperCase()}\`` : "";
+            sendText(controller, enc, `${prefix}${item.text}${badge}\n`);
+          }
+          sendText(controller, enc, `\nReady to write with this outline, or want to make changes?`);
+
+          send(controller, enc, {
+            type: "done",
+            state: {
+              competitorUrls: competitors.map(c => c.url),
+              competitorData: competitors,
+              outline,
+              currentStep: "outline_approval",
+            },
+          });
+        }
+
         // Step: keywords — fetch and present keyword suggestions
-        if (step === "init" || step === "keywords") {
+        else if (step === "init" || step === "keywords") {
           send(controller, enc, { type: "step", step: "keywords", label: "Researching keywords…" });
           sendText(controller, enc, `Let me find the best keywords for **"${state.topic}"**…\n\n`);
 
