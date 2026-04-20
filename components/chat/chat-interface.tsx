@@ -175,7 +175,7 @@ function OutlineDisplay({ outline }: { outline: OutlineItem[] }) {
   );
 }
 
-function ArticleSavedCard({ articleId, onOpen }: { articleId: string; onOpen: () => void }) {
+function ArticleSavedCard({ onOpen }: { articleId: string; onOpen: () => void }) {
   return (
     <div className="mt-2 rounded-xl border border-green-200 bg-green-50 p-4">
       <div className="flex items-center gap-2 text-green-700 font-medium text-sm mb-2">

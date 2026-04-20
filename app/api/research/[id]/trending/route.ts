@@ -38,7 +38,7 @@ export async function POST(
     return NextResponse.json([]);
   }
 
-  const created = await db.trendingAlert.createMany({
+  await db.trendingAlert.createMany({
     data: trending.map((t) => ({
       keyword: t.keyword,
       cluster: keywordToCluster.get(t.keyword) ?? "Unknown",

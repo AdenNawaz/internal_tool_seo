@@ -498,7 +498,7 @@ export function BriefPanel({ articleId, keyword, revampUrl, isRevamp, onCompetit
       <div className="space-y-3">
         <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Article Brief</p>
         <div className="animate-pulse space-y-2">
-          <p className="text-[11px] text-gray-400">Scraping competitors for "{brief.keyword}"…</p>
+          <p className="text-[11px] text-gray-400">Scraping competitors for &ldquo;{brief.keyword}&rdquo;…</p>
           {[0, 1, 2, 3].map((i) => <div key={i} className="h-2.5 bg-gray-100 rounded" />)}
         </div>
       </div>

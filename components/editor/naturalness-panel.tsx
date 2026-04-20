@@ -173,13 +173,13 @@ export function NaturalnessPanel({ articleId, editorApi, content, onClose, onTex
 
                   {/* Flagged text */}
                   <div className="bg-amber-50 border border-amber-100 rounded px-2.5 py-2">
-                    <p className="text-[11px] text-amber-900 italic leading-relaxed">"{flag.originalText}"</p>
+                    <p className="text-[11px] text-amber-900 italic leading-relaxed">&ldquo;{flag.originalText}&rdquo;</p>
                   </div>
 
                   {/* Suggestion */}
                   <div className="bg-green-50 border border-green-100 rounded px-2.5 py-2">
                     <p className="text-[10px] text-green-600 font-medium mb-0.5">Suggested alternative:</p>
-                    <p className="text-[11px] text-green-900 leading-relaxed">"{flag.suggestion}"</p>
+                    <p className="text-[11px] text-green-900 leading-relaxed">&ldquo;{flag.suggestion}&rdquo;</p>
                   </div>
 
                   {/* Actions */}

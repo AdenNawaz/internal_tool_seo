@@ -104,7 +104,7 @@ export function GapPanel({ onPrefillKeyword }: Props) {
       {gaps !== null && gaps.length > 0 && (
         <div className="space-y-0.5">
           <p className="text-[10px] text-gray-400 mb-2">
-            {gaps.length} keywords they rank for that we don't. Click to prefill.
+            {gaps.length} keywords they rank for that we don&apos;t. Click to prefill.
           </p>
           {gaps.map((kw, i) => (
             <button
