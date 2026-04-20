@@ -17,17 +17,15 @@ export const authOptions: NextAuthOptions = {
       name: "Skip",
       credentials: {},
       async authorize() {
-        // Only works in development
-        if (process.env.NODE_ENV !== "development") return null;
+        if (!process.env.DEV_BYPASS_ENABLED) return null;
         return { id: "dev", name: "Dev User", email: "dev@local" };
       },
     }),
   ],
   callbacks: {
     async signIn({ profile, account }) {
-      // Always allow dev-skip in development
       if (account?.provider === "dev-skip") {
-        return process.env.NODE_ENV === "development";
+        return !!process.env.DEV_BYPASS_ENABLED;
       }
       const email = profile?.email ?? "";
       const allowed = process.env.ALLOWED_EMAIL_DOMAIN ?? "";
