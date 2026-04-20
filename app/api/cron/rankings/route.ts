@@ -4,8 +4,12 @@ import { cachedAhrefs } from "@/lib/ahrefs-cached";
 import { parseMcpRows } from "@/lib/ahrefs-utils";
 
 export async function GET(req: NextRequest) {
-  const secret = req.headers.get("x-cron-secret") ?? req.nextUrl.searchParams.get("secret");
-  if (secret !== process.env.CRON_SECRET) {
+  // Vercel sends Authorization: Bearer <CRON_SECRET>; also accept x-cron-secret for manual calls
+  const authHeader = req.headers.get("authorization");
+  const bearerSecret = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : null;
+  const headerSecret = req.headers.get("x-cron-secret");
+  const secret = bearerSecret ?? headerSecret;
+  if (!secret || secret !== process.env.CRON_SECRET) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

@@ -31,7 +31,8 @@ export const authOptions: NextAuthOptions = {
       }
       const email = profile?.email ?? "";
       const allowed = process.env.ALLOWED_EMAIL_DOMAIN ?? "";
-      if (!allowed) return true;
+      // Deny everyone if ALLOWED_EMAIL_DOMAIN is not configured — secure default
+      if (!allowed) return false;
       return email.endsWith("@" + allowed);
     },
     async session({ session }) {
