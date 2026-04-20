@@ -1,37 +1,28 @@
-import GoogleProvider from "next-auth/providers/google";
 import CredentialsProvider from "next-auth/providers/credentials";
 import type { NextAuthOptions } from "next-auth";
 
 export const authOptions: NextAuthOptions = {
   providers: [
-    ...(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET
-      ? [
-          GoogleProvider({
-            clientId: process.env.GOOGLE_CLIENT_ID,
-            clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-          }),
-        ]
-      : []),
     CredentialsProvider({
-      id: "dev-skip",
-      name: "Skip",
-      credentials: {},
-      async authorize() {
-        if (!process.env.DEV_BYPASS_ENABLED) return null;
-        return { id: "dev", name: "Dev User", email: "dev@local" };
+      id: "credentials",
+      name: "Email",
+      credentials: {
+        email: { label: "Email", type: "email" },
+        password: { label: "Password", type: "password" },
+      },
+      async authorize(credentials) {
+        if (!credentials?.email || !credentials?.password) return null;
+        if (
+          credentials.email === process.env.ADMIN_EMAIL &&
+          credentials.password === process.env.ADMIN_PASSWORD
+        ) {
+          return { id: "admin", name: "Admin", email: credentials.email };
+        }
+        return null;
       },
     }),
   ],
   callbacks: {
-    async signIn({ profile, account }) {
-      if (account?.provider === "dev-skip") {
-        return !!process.env.DEV_BYPASS_ENABLED;
-      }
-      const email = profile?.email ?? "";
-      const allowed = process.env.ALLOWED_EMAIL_DOMAIN ?? "";
-      if (!allowed) return false;
-      return email.endsWith("@" + allowed);
-    },
     async session({ session }) {
       return session;
     },
@@ -40,4 +31,5 @@ export const authOptions: NextAuthOptions = {
     signIn: "/login",
     error: "/login",
   },
+  session: { strategy: "jwt" },
 };
