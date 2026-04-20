@@ -2,6 +2,7 @@ import { db } from "@/lib/db";
 import Link from "next/link";
 import { DashboardClient } from "@/components/dashboard/dashboard-client";
 import { SovSection } from "@/components/dashboard/sov-section";
+import { PrioritiesSection } from "@/components/dashboard/priorities-section";
 
 export const dynamic = "force-dynamic";
 
@@ -54,6 +55,8 @@ export default async function DashboardPage() {
           ← Articles
         </Link>
       </div>
+
+      <PrioritiesSection />
 
       <div className="mb-10">
         <SovSection />
