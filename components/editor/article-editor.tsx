@@ -9,6 +9,7 @@ import { ChecklistPanel } from "@/components/sidebar/checklist-panel";
 import { BriefPanel } from "@/components/sidebar/brief-panel";
 import { GapPanel } from "@/components/sidebar/gap-panel";
 import { SectionActionBar } from "./section-action-bar";
+import { NaturalnessPanel } from "./naturalness-panel";
 import type { ChecklistInput } from "@/lib/checklist";
 import type { CursorHeading, EditorAPI } from "./blocknote-editor";
 
@@ -77,6 +78,7 @@ export function ArticleEditor({
   const contentRef = useRef<unknown>(initialContent);
   const editorApiRef = useRef<EditorAPI | null>(null);
   const [cursorHeading, setCursorHeading] = useState<CursorHeading | null>(null);
+  const [reviewPanelOpen, setReviewPanelOpen] = useState(false);
 
   const scheduleSave = useCallback(
     (patch: Record<string, unknown>) => {
@@ -197,21 +199,52 @@ export function ArticleEditor({
           <ArrowLeft size={15} />
           Articles
         </Link>
-        <span
-          className={`text-xs transition-colors ${
-            saveState === "unsaved"
-              ? "text-red-400"
-              : saveState === "saving"
-              ? "text-gray-400 animate-pulse"
-              : "text-gray-400"
-          }`}
-        >
-          {saveLabel}
-        </span>
+        <div className="flex items-center gap-3">
+          <span
+            className={`text-xs transition-colors ${
+              saveState === "unsaved"
+                ? "text-red-400"
+                : saveState === "saving"
+                ? "text-gray-400 animate-pulse"
+                : "text-gray-400"
+            }`}
+          >
+            {saveLabel}
+          </span>
+          <button
+            onClick={() => setReviewPanelOpen(v => !v)}
+            className={`text-xs px-3 py-1.5 rounded-lg border transition-colors ${
+              reviewPanelOpen
+                ? "bg-gray-900 text-white border-gray-900"
+                : "text-gray-600 border-gray-200 hover:bg-gray-50"
+            }`}
+          >
+            Review writing
+          </button>
+        </div>
       </div>
 
-      {/* Body: editor + sidebar */}
+      {/* Body: review panel + editor + sidebar */}
       <div className="flex flex-1 overflow-hidden relative">
+        {/* Left: naturalness review panel */}
+        <div
+          className={`shrink-0 border-r border-gray-100 bg-white overflow-hidden transition-all duration-200 ${
+            reviewPanelOpen ? "w-[280px]" : "w-0"
+          }`}
+        >
+          {reviewPanelOpen && (
+            <NaturalnessPanel
+              articleId={id}
+              editorApi={editorApiRef.current}
+              content={analysisContent}
+              onClose={() => setReviewPanelOpen(false)}
+              onTextReplaced={() => {
+                scheduleSave({ content: contentRef.current });
+              }}
+            />
+          )}
+        </div>
+
         {/* Editor area */}
         <div className="flex-1 overflow-y-auto">
           {/* Research-from-chat banner */}
