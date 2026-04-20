@@ -21,12 +21,12 @@ import { CSS } from "@dnd-kit/utilities";
 import { GripVertical, Lock, Trash2, Plus } from "lucide-react";
 import type { OutlineItem } from "@/lib/outline-types";
 
-const TYPE_BADGE: Record<string, { label: string; cls: string }> = {
-  seo: { label: "SEO", cls: "bg-blue-100 text-blue-700" },
-  geo: { label: "GEO", cls: "bg-purple-100 text-purple-700" },
-  aeo: { label: "AEO", cls: "bg-green-100 text-green-700" },
-  paa: { label: "PAA", cls: "bg-amber-100 text-amber-700" },
-  gpt: { label: "GPT", cls: "bg-teal-100 text-teal-700" },
+const TYPE_BADGE: Record<string, { label: string; cls: string; tooltip: string }> = {
+  seo: { label: "SEO", cls: "bg-blue-100 text-blue-700", tooltip: "Standard search-optimised section — target keyword placed naturally" },
+  geo: { label: "GEO", cls: "bg-purple-100 text-purple-700", tooltip: "Written with direct citations and named entities for AI overview targeting" },
+  aeo: { label: "AEO", cls: "bg-green-100 text-green-700", tooltip: "Written as a direct answer for featured snippet targeting. Choose a format below." },
+  paa: { label: "PAA", cls: "bg-amber-100 text-amber-700", tooltip: "People Also Ask — answers the question directly in the first sentence, under 150 words" },
+  gpt: { label: "GPT", cls: "bg-teal-100 text-teal-700", tooltip: "Written as a self-contained, quotable passage for AI assistant responses" },
 };
 
 interface ItemProps {
@@ -36,9 +36,10 @@ interface ItemProps {
   onTextChange: (text: string) => void;
   onLevelToggle: () => void;
   onDelete: () => void;
+  onAeoFormatChange: (format: import("@/lib/outline-types").AeoFormat) => void;
 }
 
-function SortableItem({ item, selected, onSelect, onTextChange, onLevelToggle, onDelete }: ItemProps) {
+function SortableItem({ item, selected, onSelect, onTextChange, onLevelToggle, onDelete, onAeoFormatChange }: ItemProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: item.id,
     disabled: item.locked || item.markedForRemoval,
@@ -83,7 +84,10 @@ function SortableItem({ item, selected, onSelect, onTextChange, onLevelToggle, o
         )}
 
         {item.seoType && TYPE_BADGE[item.seoType] && (
-          <span className={`text-[9px] font-semibold px-1 py-0.5 rounded flex-shrink-0 ${TYPE_BADGE[item.seoType].cls}`}>
+          <span
+            className={`text-[9px] font-semibold px-1 py-0.5 rounded flex-shrink-0 cursor-help ${TYPE_BADGE[item.seoType].cls}`}
+            title={TYPE_BADGE[item.seoType].tooltip}
+          >
             {TYPE_BADGE[item.seoType].label}
           </span>
         )}
@@ -112,9 +116,29 @@ function SortableItem({ item, selected, onSelect, onTextChange, onLevelToggle, o
         </div>
       </div>
 
-      {/* AEO hint shown when selected */}
-      {selected && item.seoType === "aeo" && item.guidance && (
-        <p className="text-[9px] text-green-600 ml-6 mt-0.5 leading-tight">{item.guidance}</p>
+      {/* AEO format selector shown when selected */}
+      {selected && item.seoType === "aeo" && (
+        <div className="ml-6 mt-1 space-y-1">
+          {item.guidance && (
+            <p className="text-[9px] text-green-600 leading-tight">{item.guidance}</p>
+          )}
+          <div className="flex items-center gap-1 flex-wrap">
+            <span className="text-[9px] text-gray-400 font-medium">Format:</span>
+            {(["definition", "list", "steps", "number"] as const).map(fmt => (
+              <button
+                key={fmt}
+                onClick={(e) => { e.stopPropagation(); onAeoFormatChange(fmt); }}
+                className={`text-[9px] px-1.5 py-0.5 rounded capitalize transition-colors ${
+                  item.aeoFormat === fmt
+                    ? "bg-green-600 text-white"
+                    : "bg-gray-100 text-gray-500 hover:bg-gray-200"
+                }`}
+              >
+                {fmt}
+              </button>
+            ))}
+          </div>
+        </div>
       )}
     </div>
   );
@@ -184,6 +208,9 @@ export function OutlineEditor({ items, onItemsChange, onGenerateContent, generat
                   onItemsChange(items.map((i) => (i.id === item.id ? { ...i, level: i.level === 2 ? 3 : 2 } : i)))
                 }
                 onDelete={() => onItemsChange(items.filter((i) => i.id !== item.id))}
+                onAeoFormatChange={(fmt) =>
+                  onItemsChange(items.map((i) => (i.id === item.id ? { ...i, aeoFormat: fmt } : i)))
+                }
               />
             ))}
           </div>

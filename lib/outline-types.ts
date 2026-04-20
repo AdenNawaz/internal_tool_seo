@@ -1,4 +1,5 @@
 export type SeoType = "seo" | "geo" | "aeo" | "paa" | "gpt";
+export type AeoFormat = "definition" | "list" | "steps" | "number";
 
 export interface OutlineItem {
   id: string;
@@ -7,6 +8,7 @@ export interface OutlineItem {
   locked: boolean;
   guidance?: string;
   seoType?: SeoType;
+  aeoFormat?: AeoFormat;
   isNew?: boolean;
   markedForRemoval?: boolean;
 }

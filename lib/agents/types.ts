@@ -22,11 +22,14 @@ export interface CompetitorData {
   keyPoints?: string[];
 }
 
+export type AeoFormat = "definition" | "list" | "steps" | "number";
+
 export interface OutlineItem {
   id: string;
   level: 2 | 3;
   text: string;
   type: "seo" | "geo" | "aeo" | "general";
+  aeoFormat?: AeoFormat;
 }
 
 export interface ChatMessage {
