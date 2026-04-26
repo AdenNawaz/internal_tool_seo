@@ -25,6 +25,17 @@ model Article {
   secondaryKeywords  Json?
   chatOutline        Json?
   chatResearchState  Json?
+  // Create flow fields
+  contentType             String?
+  intentType              String?
+  wordCountTarget         Int?
+  country                 String?
+  useSmartContext         Boolean  @default(true)
+  preferredSources        Json?
+  excludedSources         Json?
+  allowCompetitorMentions Boolean  @default(true)
+  uniqueAngle             String?
+  referenceDocIds         Json?
   createdAt          DateTime @default(now())
   updatedAt       DateTime @updatedAt
 }
@@ -99,4 +110,51 @@ model TrendingAlert {
   growthPct   Float
   checkedAt   DateTime @default(now())
   dismissed   Boolean  @default(false)
+}
+
+model PinnedItem {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  articleId String   @db.ObjectId
+  type      String
+  content   String
+  metadata  Json?
+  pinnedAt  DateTime @default(now())
+}
+
+model ResearchSession {
+  id            String   @id @default(auto()) @map("_id") @db.ObjectId
+  articleId     String   @db.ObjectId @unique
+  keywords      Json?
+  serpHeaders   Json?
+  audienceQs    Json?
+  aiAnalysis    Json?
+  opportunities Json?
+  evidence      Json?
+  status        String   @default("pending")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model CrawlerLog {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  bot       String
+  url       String
+  visitedAt DateTime @default(now())
+}
+
+model VisibilitySnapshot {
+  id             String   @id @default(auto()) @map("_id") @db.ObjectId
+  prompt         String
+  platform       String
+  companyVisible Boolean
+  companyCited   Boolean
+  competitors    Json
+  checkedAt      DateTime @default(now())
+}
+
+model TrackedPrompt {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  prompt    String
+  category  String?
+  createdAt DateTime @default(now())
 }
