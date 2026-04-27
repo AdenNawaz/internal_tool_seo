@@ -183,10 +183,6 @@ Return JSON only:
     },
   });
 
-  await prisma.article.update({
-    where: { id: data.articleId },
-    data: { refreshOpportunity: true },
-  });
 }
 
 async function detectStaleness(data: { articleId: string }) {
