@@ -180,3 +180,190 @@ model Integration {
   scope        String
   createdAt    DateTime @default(now())
 }
+
+model JobLog {
+  id          String    @id @default(auto()) @map("_id") @db.ObjectId
+  queue       String
+  jobName     String
+  jobId       String
+  status      String    // queued | active | completed | failed
+  data        Json?
+  result      Json?
+  error       String?
+  startedAt   DateTime?
+  completedAt DateTime?
+  duration    Int?      // ms
+  createdAt   DateTime  @default(now())
+}
+
+model RankingAlert {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  articleId   String   @db.ObjectId
+  type        String   // drop | opportunity | recovery
+  keyword     String?
+  oldPosition Int?
+  newPosition Int?
+  diagnosis   String?
+  primaryFix  String?
+  urgency     String   @default("medium") // high | medium | low
+  dismissed   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+}
+
+model CompetitorSnapshot {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  domain      String
+  url         String
+  contentHash String
+  wordCount   Int?
+  headings    Json?
+  scrapedAt   DateTime @default(now())
+}
+
+model CompetitorAlert {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  type        String   // content_change | new_content | keyword_entry
+  domain      String
+  url         String
+  clusterName String?
+  summary     String?
+  threat      String   @default("medium") // high | medium | low
+  dismissed   Boolean  @default(false)
+  detectedAt  DateTime @default(now())
+}
+
+model VisibilityAlert {
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  promptId   String   @db.ObjectId
+  type       String   // gained_visibility | lost_visibility | gained_citation | lost_citation
+  platform   String
+  details    String
+  dismissed  Boolean  @default(false)
+  detectedAt DateTime @default(now())
+}
+
+model VisibilityAnalysis {
+  id                   String   @id @default(auto()) @map("_id") @db.ObjectId
+  topPerformingTopics  Json
+  consistentCompetitors Json
+  citationPatterns     Json
+  recommendedActions   Json
+  analysedAt           DateTime @default(now())
+}
+
+model SuggestedPrompt {
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  prompt     String
+  category   String
+  rationale  String
+  applied    Boolean  @default(false)
+  dismissed  Boolean  @default(false)
+  createdAt  DateTime @default(now())
+}
+
+model ContentQualityScore {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  articleId String   @db.ObjectId
+  eeat      Int
+  geo       Int
+  seo       Int
+  overall   Int
+  breakdown Json
+  scoredAt  DateTime @default(now())
+}
+
+model QualityDecayAlert {
+  id                   String   @id @default(auto()) @map("_id") @db.ObjectId
+  articleId            String   @db.ObjectId
+  oldScore             Int
+  newScore             Int
+  decayReason          String?
+  competitorAdvantages Json?
+  topFix               String?
+  estimatedScoreGain   Int?
+  dismissed            Boolean  @default(false)
+  detectedAt           DateTime @default(now())
+}
+
+model ImprovementBrief {
+  id                  String   @id @default(auto()) @map("_id") @db.ObjectId
+  articleId           String   @db.ObjectId
+  obsoleteContent     Json
+  newSectionsToAdd    Json
+  statsToUpdate       Json
+  wordCountTarget     Int?
+  estimatedRefreshTime String?
+  priorityActions     Json
+  applied             Boolean  @default(false)
+  createdAt           DateTime @default(now())
+}
+
+model ClusterHealthScore {
+  id              String   @id @default(auto()) @map("_id") @db.ObjectId
+  reportId        String   @db.ObjectId
+  clusterName     String
+  coverageScore   Int
+  rankingScore    Int
+  velocityScore   Int
+  competitorScore Int
+  aiScore         Int
+  overall         Int
+  scoredAt        DateTime @default(now())
+}
+
+model ClusterHealthAlert {
+  id             String   @id @default(auto()) @map("_id") @db.ObjectId
+  reportId       String   @db.ObjectId
+  clusterName    String
+  dropReason     String?
+  recommendation String?
+  dismissed      Boolean  @default(false)
+  detectedAt     DateTime @default(now())
+}
+
+model NextArticleRecommendation {
+  id               String   @id @default(auto()) @map("_id") @db.ObjectId
+  reportId         String?  @db.ObjectId
+  action           String   // new_article | refresh | gap_fill | trend_capture
+  target           String
+  reasoning        String
+  expectedImpact   String?
+  urgency          String   @default("this_week")
+  estimatedEffort  String?
+  dismissed        Boolean  @default(false)
+  createdAt        DateTime @default(now())
+}
+
+model RefreshBrief {
+  id                  String   @id @default(auto()) @map("_id") @db.ObjectId
+  articleId           String   @db.ObjectId @unique
+  refreshScore        Int
+  obsoleteContent     Json?
+  newSectionsToAdd    Json?
+  statsToUpdate       Json?
+  wordCountTarget     Int?
+  estimatedRefreshTime String?
+  priorityActions     Json?
+  applied             Boolean  @default(false)
+  createdAt           DateTime @default(now())
+}
+
+model LinkOpportunity {
+  id              String   @id @default(auto()) @map("_id") @db.ObjectId
+  sourceArticleId String   @db.ObjectId
+  targetArticleId String   @db.ObjectId
+  suggestedAnchor String
+  context         String
+  confidence      String   @default("medium") // high | medium
+  applied         Boolean  @default(false)
+  dismissed       Boolean  @default(false)
+  detectedAt      DateTime @default(now())
+}
+
+model LinkMapSnapshot {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  nodes     Json
+  edges     Json
+  orphaned  Json
+  createdAt DateTime @default(now())
+}
