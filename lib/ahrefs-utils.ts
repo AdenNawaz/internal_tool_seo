@@ -1,5 +1,14 @@
 import { cachedAhrefs } from "./ahrefs-cached";
 
+export function cleanDomain(input: string): string {
+  return input
+    .replace(/^https?:\/\//, "")
+    .replace(/^www\./, "")
+    .split("/")[0]
+    .trim()
+    .toLowerCase();
+}
+
 export interface RankingEntry {
   keyword: string;
   position: number;
@@ -50,7 +59,7 @@ const OWN_DOMAIN_ARGS = (domain: string) => ({
 });
 
 export async function fetchOwnDomainRankings(): Promise<RankingEntry[]> {
-  const ownDomain = process.env.OWN_DOMAIN ?? "";
+  const ownDomain = cleanDomain(process.env.OWN_DOMAIN ?? "");
   if (!ownDomain) return [];
   const result = await cachedAhrefs(
     "site-explorer-organic-keywords",
