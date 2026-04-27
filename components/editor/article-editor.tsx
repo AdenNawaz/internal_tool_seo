@@ -5,12 +5,11 @@ import dynamic from "next/dynamic";
 import Link from "next/link";
 import { ArrowLeft, ChevronLeft, ChevronRight } from "lucide-react";
 import { KeywordPanel } from "@/components/sidebar/keyword-panel";
-import { ChecklistPanel } from "@/components/sidebar/checklist-panel";
 import { BriefPanel } from "@/components/sidebar/brief-panel";
 import { GapPanel } from "@/components/sidebar/gap-panel";
+import { DiagnosticPanel } from "@/components/sidebar/diagnostic-panel";
 import { SectionActionBar } from "./section-action-bar";
 import { NaturalnessPanel } from "./naturalness-panel";
-import type { ChecklistInput } from "@/lib/checklist";
 import type { CursorHeading, EditorAPI } from "./blocknote-editor";
 
 const BlockNoteEditorComponent = dynamic(
@@ -19,7 +18,7 @@ const BlockNoteEditorComponent = dynamic(
 );
 
 type SaveState = "saved" | "saving" | "unsaved" | "idle";
-type SidebarTab = "keywords" | "brief" | "gap" | "checklist";
+type SidebarTab = "keywords" | "brief" | "gap" | "score";
 
 interface Props {
   id: string;
@@ -71,6 +70,8 @@ export function ArticleEditor({
   const [analysisContent, setAnalysisContent] = useState<unknown>(initialContent);
   const [keyword, setKeyword] = useState(initialKeyword ?? "");
   const [competitorAvgWords, setCompetitorAvgWords] = useState<number | null>(null);
+  const [authorProfile, setAuthorProfile] = useState<{ name?: string } | null>(null);
+  const [createdAt, setCreatedAt] = useState<string | undefined>(undefined);
 
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const analysisTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -161,23 +162,29 @@ export function ArticleEditor({
   }
 
   useEffect(() => {
+    fetch("/api/settings/author-profile")
+      .then((r) => r.ok ? r.json() : null)
+      .then((data: { name?: string } | null) => setAuthorProfile(data))
+      .catch(() => {});
+    fetch(`/api/articles/${id}`)
+      .then((r) => r.ok ? r.json() : null)
+      .then((data: { createdAt?: string } | null) => { if (data?.createdAt) setCreatedAt(data.createdAt); })
+      .catch(() => {});
+  }, [id]);
+
+  useEffect(() => {
     return () => {
       if (saveTimer.current) clearTimeout(saveTimer.current);
       if (analysisTimer.current) clearTimeout(analysisTimer.current);
     };
   }, []);
 
-  const checklistInput = useMemo<ChecklistInput>(
-    () => ({
-      title,
-      metaDescription: metaDescription || null,
-      slug: slug || null,
-      targetKeyword: keyword || null,
-      content: analysisContent,
-      competitorAvgWords,
-    }),
-    [title, metaDescription, slug, keyword, analysisContent, competitorAvgWords]
-  );
+  const secondaryKeywords = useMemo(() => {
+    if (!Array.isArray(initialSecondaryKeywords)) return [];
+    return (initialSecondaryKeywords as Array<{ keyword?: string } | string>).map((k) =>
+      typeof k === "string" ? k : (k.keyword ?? "")
+    ).filter(Boolean);
+  }, [initialSecondaryKeywords]);
 
   const saveLabel =
     saveState === "saving"
@@ -269,6 +276,22 @@ export function ArticleEditor({
               placeholder="Untitled"
               className="w-full text-4xl font-bold text-gray-900 placeholder-gray-300 border-none outline-none bg-transparent leading-tight"
             />
+
+            {/* Author byline */}
+            {authorProfile?.name ? (
+              <div className="flex items-center gap-2 -mt-3">
+                <div className="w-5 h-5 rounded-full bg-blue-100 flex items-center justify-center text-[9px] font-bold text-blue-700">
+                  {authorProfile.name[0]?.toUpperCase()}
+                </div>
+                <a href="/settings/author-profile" className="text-xs text-gray-400 hover:text-gray-600 transition-colors">
+                  Written by {authorProfile.name}
+                </a>
+              </div>
+            ) : (
+              <a href="/settings/author-profile" className="text-xs text-gray-300 hover:text-gray-500 -mt-3 transition-colors">
+                + Add author
+              </a>
+            )}
 
             {/* Revamp toggle */}
             <div className="flex items-center gap-3">
@@ -371,7 +394,7 @@ export function ArticleEditor({
             <div className="flex flex-col h-full">
               {/* Tabs */}
               <div className="flex border-b border-gray-100 shrink-0">
-                {(["keywords", "brief", "gap", "checklist"] as SidebarTab[]).map((tab) => (
+                {(["keywords", "brief", "gap", "score"] as SidebarTab[]).map((tab) => (
                   <button
                     key={tab}
                     onClick={() => setActiveTab(tab)}
@@ -381,7 +404,7 @@ export function ArticleEditor({
                         : "text-gray-400 hover:text-gray-700"
                     }`}
                   >
-                    {tab}
+                    {tab === "score" ? "Score" : tab}
                   </button>
                 ))}
               </div>
@@ -427,14 +450,34 @@ export function ArticleEditor({
                     />
                   </div>
                 )}
-                {activeTab === "checklist" && (
-                  <div className="px-4 py-5">
-                    <ChecklistPanel
-                      input={checklistInput}
-                      onMarkReady={handleMarkReady}
-                      status={status}
-                    />
-                  </div>
+                {activeTab === "score" && (
+                  <DiagnosticPanel
+                    articleId={id}
+                    title={title}
+                    metaDescription={metaDescription}
+                    targetKeyword={keyword || null}
+                    content={analysisContent}
+                    status={status}
+                    publishedUrl={publishedUrl || null}
+                    createdAt={createdAt}
+                    secondaryKeywords={secondaryKeywords}
+                    onTitleChange={(v) => { setTitle(v); scheduleSave({ title: v }); }}
+                    onMetaChange={(v) => { setMetaDescription(v); scheduleSave({ metaDescription: v || null }); }}
+                    onSaveField={scheduleSave}
+                    onReplaceContent={(blocks) => {
+                      editorApiRef.current?.replaceContent(blocks as Parameters<typeof editorApiRef.current.replaceContent>[0]);
+                      handleContentChange(blocks);
+                    }}
+                    onMarkReady={handleMarkReady}
+                    onInsertEvidence={(text) => {
+                      // Insert at end of document
+                      const currentBlocks = Array.isArray(contentRef.current) ? contentRef.current as unknown[] : [];
+                      const newBlock = { id: `ev-${Date.now()}`, type: "paragraph", props: { textColor: "default", backgroundColor: "default", textAlignment: "left" }, content: [{ type: "text", text, styles: {} }], children: [] };
+                      const updated = [...currentBlocks, newBlock];
+                      editorApiRef.current?.replaceContent(updated as Parameters<typeof editorApiRef.current.replaceContent>[0]);
+                      handleContentChange(updated);
+                    }}
+                  />
                 )}
               </div>
             </div>

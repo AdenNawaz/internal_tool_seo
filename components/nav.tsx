@@ -10,7 +10,7 @@ const links = [
   { href: "/research", label: "Research" },
   { href: "/dashboard", label: "Dashboard" },
   { href: "/ai-visibility", label: "AI Visibility" },
-  { href: "/settings/tone", label: "Settings" },
+  { href: "/settings", label: "Settings" },
 ];
 
 export function Nav() {
