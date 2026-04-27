@@ -51,7 +51,6 @@ interface QueryResult {
 
 export default function AIVisibilityPage() {
   const [tab, setTab] = useState<Tab>("overview");
-  const [snapshots, setSnapshots] = useState<VisibilitySnapshot[]>([]);
   const [trackedPrompts, setTrackedPrompts] = useState<TrackedPrompt[]>([]);
   const [crawlerLogs, setCrawlerLogs] = useState<CrawlerLog[]>([]);
   const [loading, setLoading] = useState(true);

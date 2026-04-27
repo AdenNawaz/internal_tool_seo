@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense } from "react";
-import { ChevronDown, Plus, X, Loader2, ChevronRight } from "lucide-react";
+import { ChevronDown, X, Loader2, ChevronRight } from "lucide-react";
 
 const CONTENT_TYPES = [
   { value: "blog_post", label: "Blog Post", description: "Conversational, story-driven", defaultWords: 1500 },

@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { ChevronDown, ChevronRight, CheckCircle2, AlertCircle, User, Link2, Quote, BarChart2, Plus } from "lucide-react";
 import type { DiagnosticResult } from "@/lib/content-diagnostic";
 import { computeTopicCoverage, buildCoverageKeywords, type KeywordCoverage, type CoverageStatus } from "@/lib/topic-coverage";
-import { extractPlainText } from "@/lib/text-analysis";
+
 
 interface PinnedItem {
   id: string;

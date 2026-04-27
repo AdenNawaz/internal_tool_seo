@@ -69,8 +69,7 @@ export function ArticleEditor({
   const [chatBannerDismissed, setChatBannerDismissed] = useState(false);
   const [analysisContent, setAnalysisContent] = useState<unknown>(initialContent);
   const [keyword, setKeyword] = useState(initialKeyword ?? "");
-  const [competitorAvgWords, setCompetitorAvgWords] = useState<number | null>(null);
-  const [authorProfile, setAuthorProfile] = useState<{ name?: string } | null>(null);
+const [authorProfile, setAuthorProfile] = useState<{ name?: string } | null>(null);
   const [createdAt, setCreatedAt] = useState<string | undefined>(undefined);
 
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -417,7 +416,7 @@ export function ArticleEditor({
                     initialKeyword={initialKeyword}
                     onKeywordChange={handleKeywordChange}
                     analysisContent={analysisContent}
-                    onCompetitorAvgWords={setCompetitorAvgWords}
+                    onCompetitorAvgWords={() => {}}
                     autoLookup={hasChatState && !!initialKeyword}
                     initialSecondaryKeywords={initialSecondaryKeywords}
                   />
@@ -429,7 +428,7 @@ export function ArticleEditor({
                       keyword={keyword}
                       revampUrl={isRevamp ? revampUrl : null}
                       isRevamp={isRevamp}
-                      onCompetitorAvgWords={setCompetitorAvgWords}
+                      onCompetitorAvgWords={() => {}}
                       onInjectContent={(blocks) => {
                         editorApiRef.current?.replaceContent(blocks);
                         handleContentChange(blocks);

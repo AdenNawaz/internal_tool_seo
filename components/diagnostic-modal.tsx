@@ -40,8 +40,8 @@ function ScoreBar({ label, before, after }: { label: string; before: number; aft
   );
 }
 
-function CategoryCard({ id, label, score, bars, selected, onToggle }: {
-  id: Category; label: string; score: number; bars: Array<{ label: string; value: number }>;
+function CategoryCard({ label, score, bars, selected, onToggle }: {
+  id?: Category; label: string; score: number; bars: Array<{ label: string; value: number }>;
   selected: boolean; onToggle: () => void;
 }) {
   const [expanded, setExpanded] = useState(false);

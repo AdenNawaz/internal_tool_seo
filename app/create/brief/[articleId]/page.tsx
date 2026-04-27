@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import {
   ArrowLeft, FileText, ChevronDown, ChevronRight, CheckCircle2, Loader2,
@@ -51,9 +51,7 @@ export default function BriefReviewPage() {
   const [writingMode, setWritingMode] = useState<WritingMode>("ai");
   const [generating, setGenerating] = useState(false);
   const [savingBrief, setSavingBrief] = useState(false);
-  const [generatingSection, setGeneratingSection] = useState<number | null>(null);
   const [contentType, setContentType] = useState("blog");
-  const eventSourceRef = useRef<EventSource | null>(null);
 
   useEffect(() => {
     async function load() {
@@ -89,7 +87,7 @@ export default function BriefReviewPage() {
   function toggleSection(i: number) {
     setExpanded((prev) => {
       const next = new Set(prev);
-      next.has(i) ? next.delete(i) : next.add(i);
+      if (next.has(i)) { next.delete(i); } else { next.add(i); }
       return next;
     });
   }

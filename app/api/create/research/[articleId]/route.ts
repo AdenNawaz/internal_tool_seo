@@ -6,9 +6,6 @@ import { parseMcpRows } from "@/lib/ahrefs-utils";
 import { collectEvidence } from "@/lib/evidence-collector";
 import { queryAIPlatforms } from "@/lib/ai-visibility";
 
-function send(controller: ReadableStreamDefaultController, event: unknown) {
-  controller.enqueue(`data: ${JSON.stringify(event)}\n\n`);
-}
 
 async function serpResults(query: string): Promise<Array<{ url: string; title: string }>> {
   const key = process.env.SERPAPI_KEY;
@@ -175,7 +172,6 @@ export async function GET(
         const allHeaders = scraped.flatMap((s) => extractHeaders(s.content, s.url));
 
         // Calculate coverage for keywords
-        const allContent = scraped.map((s) => s.content).join(" ").toLowerCase();
         keywords = keywords.map((kw) => ({
           ...kw,
           coverage: Math.round(scraped.filter((s) => s.content.toLowerCase().includes(kw.keyword.toLowerCase())).length / Math.max(scraped.length, 1) * 100),
@@ -281,7 +277,7 @@ export async function POST(
 
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { articleId: string } }
+  _ctx: { params: { articleId: string } }
 ) {
   const { pinId } = await req.json() as { pinId: string };
   await db.pinnedItem.delete({ where: { id: pinId } }).catch(() => null);

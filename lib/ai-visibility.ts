@@ -45,9 +45,6 @@ function extractUrls(text: string): string[] {
   return Array.from(new Set(matches));
 }
 
-function domainOf(url: string): string {
-  try { return new URL(url).hostname.replace(/^www\./, ""); } catch { return ""; }
-}
 
 function extractBrands(text: string, knownDomains: string[]): string[] {
   return knownDomains.filter((domain) => {
