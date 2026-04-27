@@ -276,8 +276,7 @@ export async function POST(
 }
 
 export async function DELETE(
-  req: NextRequest,
-  _ctx: { params: { articleId: string } }
+  req: NextRequest
 ) {
   const { pinId } = await req.json() as { pinId: string };
   await db.pinnedItem.delete({ where: { id: pinId } }).catch(() => null);

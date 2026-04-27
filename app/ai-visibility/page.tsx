@@ -5,14 +5,6 @@ import { Eye, MessageSquare, Bot, Plus, Trash2, Loader2, RefreshCw, CheckCircle,
 
 type Tab = "overview" | "prompts" | "crawlers";
 
-interface VisibilitySnapshot {
-  id: string;
-  prompt: string;
-  platform: string;
-  companyVisible: boolean;
-  companyCited: boolean;
-  checkedAt: string;
-}
 
 interface TrackedPrompt {
   id: string;

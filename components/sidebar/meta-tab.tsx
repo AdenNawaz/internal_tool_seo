@@ -31,7 +31,7 @@ function Check({ pass, label, hint }: { pass: boolean; label: string; hint?: str
   );
 }
 
-export function MetaTab({ title, metaDescription, targetKeyword, articleId: _articleId, content, onTitleChange, onMetaChange, onSaveField }: MetaTabProps) {
+export function MetaTab({ title, metaDescription, targetKeyword, content, onTitleChange, onMetaChange, onSaveField }: Omit<MetaTabProps, "articleId"> & { articleId?: string }) {
   const [editing, setEditing] = useState(false);
   const [localTitle, setLocalTitle] = useState(title);
   const [localMeta, setLocalMeta] = useState(metaDescription);
